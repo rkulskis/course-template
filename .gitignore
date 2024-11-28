@@ -1,0 +1,7 @@
+*.txt
+*.zip
+*~
+*__pycache__
+*.DS_Store
+inputs
+outputs
