@@ -2,6 +2,11 @@
 # Simple graphs: v3.4
 # Adam Smith, Ross Mikulskis
 ############################################################
+import re
+import os, sys, subprocess, time
+from gradescope_utils.autograder_utils.decorators import weight,visibility,number
+import unittest
+from collections import defaultdict
 import random
 import numpy as np
 ############################################################ Adjacency list
@@ -14,6 +19,13 @@ def addNode(G, u):
     if u not in G:
         G[u] = {}
     
+def delNode(G, u, delIncomingEdges=False):
+    if u not in G:
+        return
+    if delIncomingEdges:
+        foreachEdge(G, lambda a,b: delEdge(a,b) if b == u else None)
+    del G[u]
+
 ############################################################ Edges
 def E(G):                                  # E = edges set
     E = set()
@@ -31,6 +43,13 @@ def addEdge(G, u, v, label=True, f=None, undir=False):
     if undir:
         G[v][u] = G[u][v]
 
+def delEdge(G, u, v, undirected=False):
+    if not undirected and v in G[u]:
+        del G[u][v]
+    elif undirected and v in G[u] and u in G[v]:
+        del G[u][v]
+        del G[v][u]
+        
 def foreachEdge(G, f_e, safe=False):
     if safe:
         for (u,v) in E(G): f_e(u,v)

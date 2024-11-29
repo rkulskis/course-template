@@ -5,15 +5,7 @@ maximal automation and speed.
 ## Getting started
 ### Demo
 ```bash
-# generate tests and starter_code/classlib.py = subset of top-level classlib.py
-# where only functions used in solution.py are included.
-cd PA-template
-make
-cd starter_code
-make				# runs all starter_code tests on submission.py
-make T=1			# runs only test 1
-cd ../autograder
-make				# test submission.py against all autograder/tests
+make demo
 ```
 
 Run `make zip` inside `starter_code/` and `autograder/` to get zip files for 
@@ -25,7 +17,8 @@ To port to your own assignment add your:
 2. Test creation code to `create_assignment_files.py`
 2. Test verification code to `test.py`
 3. Write a solution in `solution.py`
-   * Run `make` inside `starter_code
+   * Run `make` inside `starter_code/`
+   * Run `make` inside `autograder/`
 
 ## Background
 Below is a `tree` of the code including descriptions for the files and how to use
@@ -62,9 +55,11 @@ submissions, but can be extended to other languages as needed.
 │   └── starter_code
 │       ├── submission.py ⭐
 │       ├── README.md ⭐
+│       ├── Makefile
 │       ├── inputs -> ../autograder/tests/visible/inputs ⚙️
 │       ├── outputs -> ../autograder/tests/visible/outputs ⚙️
 │       └── classlib.py ⚙️
+├── Makefile
 ├── README.md
 └── classlib.py ⭐
 ```

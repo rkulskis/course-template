@@ -10,10 +10,12 @@ ifneq ($(T), -1)
   T_f = $(shell printf "%02d" $(T))
   INPUT = ./inputs/input$(T_f).txt
 all:
+	@echo "Running test$(T_f)!"
 	@python3 submission.py $(INPUT) $(STUDENT_OUTPUT)
 	@$(diff_check)
 else
 all:
+	@echo "Running all tests"
 	@for input in inputs/input*.txt; do \
 		T=$$(echo $$input | tr -d -c 0-9); \
 		CORRECT_OUTPUT=$$(echo $$input | sed 's|input|output|g'); \
