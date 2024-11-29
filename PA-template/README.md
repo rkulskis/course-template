@@ -7,6 +7,7 @@ maximal automation and speed.
 ```bash
 # generate tests and starter_code/classlib.py = subset of top-level classlib.py
 # where only functions used in solution.py are included.
+cd PA-template
 make
 cd starter_code
 make				# runs all starter_code tests on submission.py
