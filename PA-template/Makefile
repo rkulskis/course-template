@@ -13,4 +13,5 @@ zip: tests
 	$(MAKE) zip -C starter_code
 	mv autograder/*.zip starter_code/*.zip .
 clean:
-	find . -name "inputs" -o -name "outputs" -exec rm -rf {} +
+	cat ../.gitignore | while read -r pattern; \
+	do find . -name "$$pattern" -exec rm -rf {} +; done

@@ -8,6 +8,7 @@ from gradescope_utils.autograder_utils.decorators import weight,visibility,numbe
 import unittest
 from collections import defaultdict
 import random
+import heapq, queue
 import numpy as np
 ############################################################ Adjacency list
 def emptyGraph(n=0):

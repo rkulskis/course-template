@@ -8,6 +8,7 @@ from gradescope_utils.autograder_utils.decorators import weight,visibility,numbe
 import unittest
 from collections import defaultdict
 import random
+import heapq, queue
 import numpy as np
 ############################################################ Adjacency list
 def emptyGraph(n=0):
@@ -177,7 +178,7 @@ def execTest(i, visibility, checkAnswer):
     if ret.returncode != 0:
         error_string = ret.stderr.decode() if ret.stderr else ""
         return False, f"Submitted program crashed.\n === Error messages:\n \
-        {error_string[:min(1000, len(error_string))]}"
+        {error_string[:min(1000, len(error_string))]}\n WITH {in_file}"
     
     passed, feedback = checkAnswer(in_file, out_file, student_out_file)
     info = f"Submitted program terminated in {runtime:.2f} seconds.\n{feedback}"

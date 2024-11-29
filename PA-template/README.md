@@ -2,6 +2,13 @@
 This template allows for course staff to easily create new assignments with 
 maximal automation and speed.
 
+To pull this framework into an existing autograder repository run:
+```
+git remote add upstream git@github.com:rkulskis/autograder-template.git
+git remote set-url --push upstream no_push
+git pull upstream main --allow-unrelated-histories
+```
+
 ## Getting started
 ### Demo
 ```bash
