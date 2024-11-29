@@ -28,7 +28,7 @@ all:
 endif
 
 zip: clean
-	zip -r start_code.zip .
+	zip -r starter_code.zip .
 
 clean:
 	rm -rf *~ __pycache__ $(STUDENT_OUTPUT)
