@@ -4,4 +4,7 @@ zip: clean
 test:
 	python3 tests/test.py
 clean:
-	rm -rf __pycache__ *~ *.zip student_out*
+	find . -name "__pycache__" -exec rm -rf {} +
+	find . -name "*~" -exec rm -rf {} +
+	find . -name "*.zip" -exec rm -rf {} +
+	find . -name "student_out*" -exec rm -rf {} +

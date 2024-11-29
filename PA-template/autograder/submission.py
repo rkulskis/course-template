@@ -1,1 +1,1 @@
-../starter_code/submission.py
+../solution/submission.py

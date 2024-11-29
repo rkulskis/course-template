@@ -210,7 +210,8 @@ def generate_test_methods(default_weights, custom_weights, checkAnswer):
             setattr(Test, f'test_{i}', Test().generate_test(i, visibility,
                                                             w, checkAnswer))
 ############################################################ Assignment creation
-def create_starter_library(sol_file="solution.py", lib_file="classlib.py"):
+def create_starter_library(sol_file="solution/submission.py",
+                           lib_file="classlib.py"):
     regex_fcall = r'\b([a-zA-Z_][a-zA-Z0-9_]*)\s*\('
     regex_fdef = r'^\s*def\s+([a-zA-Z_][a-zA-Z0-9_]*)\s*\('
     regex_section_header = r'^#{60}'

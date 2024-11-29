@@ -23,7 +23,7 @@ To port to your own assignment add your:
 1. Library functions for the class to `classlib.py`
 2. Test creation code to `create_assignment_files.py`
 2. Test verification code to `test.py`
-3. Write a solution in `solution.py`
+3. Write a solution in `solution/submission.py`
    * Run `make` inside `starter_code/`
    * Run `make` inside `autograder/`
 
@@ -43,10 +43,13 @@ submissions, but can be extended to other languages as needed.
 .
 ├── PA-template
 │   ├── autograder
+│   │   ├── classlib.py -> ../starter_code/classlib.py
+│   │   ├── requirements.txt
 │   │   ├── Makefile
 │   │   ├── run_autograder
 │   │   ├── run_tests.py
 │   │   ├── setup.sh
+│   │   ├── submission.py -> ../solution/submission.py # not included make zip
 │   │   └── tests 
 │   │       ├── classlib.py -> ../../../classlib.py
 │   │       ├── test.py ⭐
@@ -58,7 +61,9 @@ submissions, but can be extended to other languages as needed.
 │   ├── create_assignment_files.py ⭐
 │   ├── Makefile
 │   ├── classlib.py -> ../classlib.py
-│   ├── solution.py ⭐
+│   ├── solution
+│   │   ├── submission.py ⭐
+│   │   └── classlib.py -> ../starter_code/classlib.py
 │   └── starter_code
 │       ├── submission.py ⭐
 │       ├── README.md ⭐

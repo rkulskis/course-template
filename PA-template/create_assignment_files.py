@@ -1,5 +1,5 @@
 import random
-from solution import *
+from solution.submission import *
 from classlib import *
 from collections import defaultdict
 
