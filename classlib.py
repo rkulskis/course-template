@@ -2,19 +2,14 @@
 # Simple graphs: v3.4
 # Adam Smith, Ross Mikulskis
 ############################################################
-import re
-import os, sys, subprocess, time
-from gradescope_utils.autograder_utils.decorators import weight,visibility,number
-import unittest
-from collections import defaultdict
 import random
+import sys, os
 import heapq, queue
 import numpy as np
 ############################################################ Adjacency list
 def emptyGraph(n=0):
     return {i: {} for i in range(n)}
 ############################################################ Nodes
-def N(G): return len(G)                    # N = nodes cardinality
 def V(G): return {u for u in G}            # V = nodes set
 
 def addNode(G, u):
@@ -27,10 +22,14 @@ def delNode(G, u, delIncomingEdges=False):
     if delIncomingEdges:
         foreachEdge(G, lambda a,b: delEdge(a,b) if b == u else None)
     del G[u]
-
+    
+def xorNode(G, u):
+    addNode(G,u) if u not in G else delNode(G,u)
+    
 def foreachNode(G, f_v, safe=False):
     s = lambda G: V(G) if safe else G
     for u in s(G): f_v(u)
+
 ############################################################ Edges
 def E(G):                                  # E = edges set
     E = set()
@@ -55,18 +54,17 @@ def delEdge(G, u, v, undirected=False):
         del G[u][v]
         del G[v][u]
         
+def xorEdge(G, u, v, label=True, f=None, undir=False):
+    if u in G and v in G[u]:
+        delEdge(G, u, v)
+    else:
+        addEdge(G, u, v, label, f, undir)
+
 def foreachEdge(G, f_e, safe=False):
     if safe:
         for (u,v) in E(G): f_e(u,v)
     else:
         traverseGraph(G, lambda u: None, f_e)
-############################################################ Set-like operations
-def copyGraph(G):               # deep copy
-    C = emptyGraph()
-    traverseGraph(G,
-                  lambda u: addNode(C, u),
-                  lambda u,v: addEdge(C, u, v, G[u][v]))
-    return C
 ############################################################ Traversals
 def traverseGraph(G, f_v, f_e, safe=False):
     if safe:
@@ -80,21 +78,40 @@ def traverseGraph(G, f_v, f_e, safe=False):
 def traverseGraphSafe(G, f_v, f_e): # safe since iterate over list
     for (u,v) in E(G): f_e(u, v) # edges first since may delete nodes
     for u in V(G): f_v(u)
-############################################################ Boolean operations
-def graphForAll(G, f):
-    for u in G:
-        for v in G[u]:
-            if not f(u, v):
-                return False
-    return True
 
-def graphIsSubset(G1, G2, f=lambda w1, w2: w1 == w2): # G1 subset_eq G2
-    def isSubset(u, v):
-        return u in G2 and v in G2[u] and f(G1[u][v], G2[u][v])
-    return graphForAll(G1, isSubset)
+############################################################ I/O functions
+def readGraphF(f, intWeights=True):
+    G = emptyGraph()
+    cast = int if intWeights else float
+    raw = [[cast(x) for x in s.split(',')] for s in f.read().splitlines()]
+    for entry in raw:
+        if len(entry) == 1:  # node name
+            addNode(G, int(entry[0]))
+        elif len(entry) == 2:  # unweighted
+            addEdge(G, int(entry[0]), int(entry[1]))
+        elif len(entry) == 3:  # weighted
+            addEdge(G, int(entry[0]), int(entry[1]), label=cast(entry[2]))
+        else:
+            print("Incorrectly formatted entry ignored:", entry)
+    return G
 
-def graphsEqual(G1, G2, f=lambda w1, w2: w1 == w2):
-    return graphIsSubset(G1, G2, f) and graphIsSubset(G2, G1, f)
+def readGraph(input_file):
+    with open(input_file, 'r') as f:
+        return readGraphF(f)
+
+def writeGraphF(G, f):          # sorted so identical graphs formatted same
+    for u in sorted(G):
+        f.write(f"{u}\n")
+        for v in sorted(G[u]):
+            if type(G[u][v]) == bool:
+                f.write(f"{u}, {v}\n") # unweighted
+            else:
+                f.write(f"{u}, {v}, {G[u][v]}\n") # weighted
+
+def writeGraph(G, output_file):
+    with open(output_file, 'w') as f:
+        writeGraphF(G, f)
+    return
 ############################################################ Graph generators
 def sampleWoutReplace(n,d, exclude, rng):
     # generate d numbers without replacement from {0,...,n-1} - {exclude}.
@@ -123,39 +140,31 @@ def randomDigraphDegreeBound(n, d, seed=None):
                   lambda u: None,
                   scale_edge)    
     return G
-############################################################ I/O functions
-def writeGraphF(G, f):          # sorted so identical graphs formatted same
-    for u in sorted(G):
-        f.write(f"{u}\n")
-        for v in sorted(G[u]):
-            if type(G[u][v]) == bool:
-                f.write(f"{u}, {v}\n") # unweighted
-            else:
-                f.write(f"{u}, {v}, {G[u][v]}\n") # weighted
-                
-def readGraph(input_file):
-    with open(input_file, 'r') as f:
-        return readGraphF(f)
+############################################################ Boolean operations
+def graphForAll(G, f_v=None, f_e=None):
+    for u in G:
+        if f_v and not f_v(u):
+            return False
+        if not f_e: continue
+        for v in G[u]:
+            if not f_e(u, v):
+                return False
+    return True
 
-def readGraphF(f, intWeights=True):
-    G = emptyGraph()
-    cast = int if intWeights else float
-    raw = [[cast(x) for x in s.split(',')] for s in f.read().splitlines()]
-    for entry in raw:
-        if len(entry) == 1:  # node name
-            addNode(G, int(entry[0]))
-        elif len(entry) == 2:  # unweighted
-            addEdge(G, int(entry[0]), int(entry[1]))
-        elif len(entry) == 3:  # weighted
-            addEdge(G, int(entry[0]), int(entry[1]), label=cast(entry[2]))
-        else:
-            print("Incorrectly formatted entry ignored:", entry)
-    return G
+def graphIsSubset(G1, G2, f=lambda w1, w2: w1 == w2): # G1 subset_eq G2
+    def isSubset(u, v):
+        return u in G2 and v in G2[u] and f(G1[u][v], G2[u][v])
+    return graphForAll(G1, f_e=isSubset)
+
+import re
+import timeout_decorator
+import subprocess, time
+from gradescope_utils.autograder_utils.decorators import *
+import unittest
+from collections import defaultdict
     
-def writeGraph(G, output_file):
-    with open(output_file, 'w') as f:
-        writeGraphF(G, f)
-    return
+def graphsEqual(G1, G2, f=lambda w1, w2: w1 == w2):
+    return graphIsSubset(G1, G2, f) and graphIsSubset(G2, G1, f)
 ############################################################ Gradescope
 def execTest(i, visibility, checkAnswer):
     in_file = f"tests/{visibility}/inputs/input{i:02d}.txt"
@@ -178,25 +187,28 @@ def execTest(i, visibility, checkAnswer):
     if ret.returncode != 0:
         error_string = ret.stderr.decode() if ret.stderr else ""
         return False, f"Submitted program crashed.\n === Error messages:\n \
-        {error_string[:min(1000, len(error_string))]}\n WITH {in_file}"
+        {error_string[:min(1000, len(error_string))]}"
     
-    passed, feedback = checkAnswer(in_file, out_file, student_out_file)
+    passed, feedback = checkAnswer(i, in_file, out_file, student_out_file)
     info = f"Submitted program terminated in {runtime:.2f} seconds.\n{feedback}"
     return passed, info
 
 class Test(unittest.TestCase):  # auto generate tests
-    def formatted_test_run(self, i, visibility, checkAnswer):
+    def formatted_test_run(self, i, visibility, checkAnswer, test_description):
         print(f"==========Testing input {i:02d} ({visibility})==========")
+        print(test_description)
         passed, info = execTest(i, visibility, checkAnswer)
         self.fail(info) if not passed else print(info)
 
-    def generate_test(self, i, visibility, w, checkAnswer):
+    def generate_test(self, i, visibility, w, checkAnswer, test_description):
         @weight(w)
-        @number(i)
+        @number(f'({i:02d}: {test_description}') # display metadata on test
+        @timeout_decorator.timeout(5)
         def test_func(self):
-            self.formatted_test_run(i, visibility, checkAnswer)
+            self.formatted_test_run(i, visibility, checkAnswer, test_description)
         return test_func
-def generate_test_methods(default_weights, custom_weights, checkAnswer):
+def generate_test_methods(default_weights, custom_weights,
+                          checkAnswer, test_descriptions):
     for visibility in default_weights:
         dirpath = f"./tests/{visibility}/inputs"
         if not os.path.isdir(dirpath):
@@ -207,8 +219,9 @@ def generate_test_methods(default_weights, custom_weights, checkAnswer):
                 w = custom_weights[i]
             else:
                 w = default_weights[visibility]
-            setattr(Test, f'test_{i}', Test().generate_test(i, visibility,
-                                                            w, checkAnswer))
+            setattr(Test, f"test_{i}",
+                    Test().generate_test(i, visibility, w,
+                                         checkAnswer, test_descriptions[i]))
 ############################################################ Assignment creation
 def create_starter_library(sol_file="solution/submission.py",
                            lib_file="classlib.py"):

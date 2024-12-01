@@ -1,6 +1,6 @@
 all: test
 zip: clean
-	zip -r autograder.zip . -x submission.py
+	zip -r autograder.zip . -x "*submission.py"
 test:
 	python3 tests/test.py
 clean:

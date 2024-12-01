@@ -2,12 +2,8 @@
 # Simple graphs: v3.4
 # Adam Smith, Ross Mikulskis
 ############################################################
-import re
-import os, sys, subprocess, time
-from gradescope_utils.autograder_utils.decorators import weight,visibility,number
-import unittest
-from collections import defaultdict
 import random
+import sys, os
 import heapq, queue
 import numpy as np
 ############################################################ Adjacency list
@@ -26,6 +22,13 @@ def delNode(G, u, delIncomingEdges=False):
     if delIncomingEdges:
         foreachEdge(G, lambda a,b: delEdge(a,b) if b == u else None)
     del G[u]
+    
+def xorNode(G, u):
+    addNode(G,u) if u not in G else delNode(G,u)
+    
+def foreachNode(G, f_v, safe=False):
+    s = lambda G: V(G) if safe else G
+    for u in s(G): f_v(u)
 
 ############################################################ Edges
 def E(G):                                  # E = edges set
@@ -51,6 +54,12 @@ def delEdge(G, u, v, undirected=False):
         del G[u][v]
         del G[v][u]
         
+def xorEdge(G, u, v, label=True, f=None, undir=False):
+    if u in G and v in G[u]:
+        delEdge(G, u, v)
+    else:
+        addEdge(G, u, v, label, f, undir)
+
 def foreachEdge(G, f_e, safe=False):
     if safe:
         for (u,v) in E(G): f_e(u,v)
@@ -69,20 +78,8 @@ def traverseGraph(G, f_v, f_e, safe=False):
 def traverseGraphSafe(G, f_v, f_e): # safe since iterate over list
     for (u,v) in E(G): f_e(u, v) # edges first since may delete nodes
     for u in V(G): f_v(u)
-############################################################ I/O functions
-def writeGraphF(G, f):          # sorted so identical graphs formatted same
-    for u in sorted(G):
-        f.write(f"{u}\n")
-        for v in sorted(G[u]):
-            if type(G[u][v]) == bool:
-                f.write(f"{u}, {v}\n") # unweighted
-            else:
-                f.write(f"{u}, {v}, {G[u][v]}\n") # weighted
-                
-def readGraph(input_file):
-    with open(input_file, 'r') as f:
-        return readGraphF(f)
 
+############################################################ I/O functions
 def readGraphF(f, intWeights=True):
     G = emptyGraph()
     cast = int if intWeights else float
@@ -97,7 +94,20 @@ def readGraphF(f, intWeights=True):
         else:
             print("Incorrectly formatted entry ignored:", entry)
     return G
-    
+
+def readGraph(input_file):
+    with open(input_file, 'r') as f:
+        return readGraphF(f)
+
+def writeGraphF(G, f):          # sorted so identical graphs formatted same
+    for u in sorted(G):
+        f.write(f"{u}\n")
+        for v in sorted(G[u]):
+            if type(G[u][v]) == bool:
+                f.write(f"{u}, {v}\n") # unweighted
+            else:
+                f.write(f"{u}, {v}, {G[u][v]}\n") # weighted
+
 def writeGraph(G, output_file):
     with open(output_file, 'w') as f:
         writeGraphF(G, f)

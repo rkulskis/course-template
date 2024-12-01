@@ -12,8 +12,8 @@ def doubleEdgeWeights(G):
 
 ############################################################ for course staff
 sys.path.insert(0, os.path.abspath(".."))
-if os.path.exists(os.path.join(os.path.abspath(".."), 'solution.py')):
-    from solution import *
+if os.path.exists(os.path.join(os.path.abspath("../solution"), 'submission.py')):
+    from solution.submission import *
 ############################################################
 
 USAGE = "Usage: python3 sumbission.py input_file output_file"

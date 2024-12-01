@@ -2,7 +2,8 @@
 
 # Set up autograder files
 
-cp /autograder/submission/*.py /autograder/source/ &> /dev/null
+cp /autograder/submission/submission.py /autograder/source/ &> /dev/null
+cp /autograder/submission/submission.py /autograder/source/tests/
 
 cd /autograder/source
 
