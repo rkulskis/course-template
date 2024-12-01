@@ -6,6 +6,8 @@ To pull this framework into an existing autograder repository run:
 ```
 git remote add upstream git@github.com:rkulskis/autograder-template.git
 git remote set-url --push upstream no_push
+git config --global merge.keeporigin.driver "cp -f %A %O"
+echo "classlib.py merge=keeporigin" > .gitattributes
 git pull upstream main --allow-unrelated-histories
 ```
 
