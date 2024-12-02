@@ -4,3 +4,8 @@
 *.DS_Store
 inputs
 outputs
+*.aux
+*.log
+*.out
+test_descriptions.txt
+student_output.txt
