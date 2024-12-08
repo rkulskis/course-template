@@ -1,23 +1,21 @@
 ############################################################
-# Template starter code
-# Ross Mikulskis, rkulskis@bu.edu
+# Starter code for PA-template
+# Created on December 08, 2024
 ############################################################
 
-import sys, os
 from classlib import *
 
 def doubleEdgeWeights(G):
-    # TODO: implement
-    return
+    return # TODO: implement
 
 ############################################################ for course staff
-sys.path.insert(0, os.path.abspath(".."))
-if os.path.exists(os.path.join(os.path.abspath("../solution"), 'submission.py')):
+sys.path.insert(0, os.path.abspath('..'))
+if os.path.exists('../solution/submission.py'):
     from solution.submission import *
 ############################################################
 
-USAGE = "Usage: python3 sumbission.py input_file output_file"
 def interpretCommandLineArgs(args = []):
+    USAGE = "Usage: python3 sumbission.py input_file output_file"
     assert len(args) == 2, USAGE
     input_file = args[0]
     output_file = args[1]
@@ -27,4 +25,4 @@ def interpretCommandLineArgs(args = []):
     return
 
 if __name__ == "__main__":
-    interpretCommandLineArgs(sys.argv[1:])    
+    interpretCommandLineArgs(sys.argv[1:])

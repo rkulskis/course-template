@@ -10,6 +10,7 @@ import numpy as np
 def emptyGraph(n=0):
     return {i: {} for i in range(n)}
 ############################################################ Nodes
+def N(G): return len(G)                    # N = nodes cardinality
 def V(G): return {u for u in G}            # V = nodes set
 
 def addNode(G, u):
@@ -30,7 +31,10 @@ def foreachNode(G, f_v, safe=False):
     s = lambda G: V(G) if safe else G
     for u in s(G): f_v(u)
 
+def degree(G, u):
+    return len(G[u])
 ############################################################ Edges
+def M(G): return sum(len(G[u]) for u in G) # M = edges cardinality
 def E(G):                                  # E = edges set
     E = set()
     foreachEdge(G, lambda u,v: E.add((u,v)))
@@ -65,54 +69,122 @@ def foreachEdge(G, f_e, safe=False):
         for (u,v) in E(G): f_e(u,v)
     else:
         traverseGraph(G, lambda u: None, f_e)
-############################################################ Traversals
-def traverseGraph(G, f_v, f_e, safe=False):
-    if safe:
-        traverseGraphSafe(G, f_v, f_e)
-        return
-    for u in G:
-        f_v(u)
-        for v in G[u]:
-            f_e(u, v)
+############################################################ Set-like operations
+def copyGraph(G):               # deep copy
+    C = emptyGraph()
+    traverseGraph(G,
+                  lambda u: addNode(C, u),
+                  lambda u,v: addEdge(C, u, v, G[u][v]))
+    return C
 
-def traverseGraphSafe(G, f_v, f_e): # safe since iterate over list
-    for (u,v) in E(G): f_e(u, v) # edges first since may delete nodes
-    for u in V(G): f_v(u)
-
-############################################################ I/O functions
-def readGraphF(f, intWeights=True):
-    G = emptyGraph()
-    cast = int if intWeights else float
-    raw = [[cast(x) for x in s.split(',')] for s in f.read().splitlines()]
-    for entry in raw:
-        if len(entry) == 1:  # node name
-            addNode(G, int(entry[0]))
-        elif len(entry) == 2:  # unweighted
-            addEdge(G, int(entry[0]), int(entry[1]))
-        elif len(entry) == 3:  # weighted
-            addEdge(G, int(entry[0]), int(entry[1]), label=cast(entry[2]))
-        else:
-            print("Incorrectly formatted entry ignored:", entry)
+def makeUndirected(G):          # ensure every (u,v) has a (v,u)
+    foreachEdge(G, lambda u,v: addEdge(G, v,u, G[u][v]))
     return G
 
-def readGraph(input_file):
-    with open(input_file, 'r') as f:
-        return readGraphF(f)
+def makeDirected(G):
+    foreachEdge(G, lambda u,v: delEdge(G, v,u), safe=True)
+    return G
 
-def writeGraphF(G, f):          # sorted so identical graphs formatted same
-    for u in sorted(G):
-        f.write(f"{u}\n")
-        for v in sorted(G[u]):
-            if type(G[u][v]) == bool:
-                f.write(f"{u}, {v}\n") # unweighted
-            else:
-                f.write(f"{u}, {v}, {G[u][v]}\n") # weighted
+def makeConnected(G):
+    def addChild(u):  # adds edge to node that is not parent of u
+        for v in G:
+            if u not in G[v]:
+                addEdge(G, u, v, label=4)
+                
+    foreachNode(G, lambda u: addChild if degree(G,u) == 0 else None)
+    return G
 
-def writeGraph(G, output_file):
-    with open(output_file, 'w') as f:
-        writeGraphF(G, f)
-    return
+def reverseGraph(G):
+    def reverseEdge(u,v):
+        addEdge(G, v, u, G[u][v])
+        delEdge(G, u, v)
+    foreachEdge(G, reverseEdge, safe=True)
+    return G
+
+def mergeGraph(G1, G2, f=lambda w1, w2: w1 + w2): # default behavior: G1 + G2
+    traverseGraph(G2,
+                  lambda u: addNode(G1,u),
+                  lambda u,v: addEdge(G1, u, v, G2[u][v], f=f))
+    return G1
+
+def subtractGraph(G1, G2, subtractNodes=False):      # G1 - G2
+    def rmG_n(u):
+        delNode(G1, u)     
+    traverseGraph(G2,
+                  lambda u: rmG_n if subtractNodes else None,
+                  lambda u,v: delEdge(G1, u, v),
+                  safe=True)
+    return G1
+
+def intersectGraphs(G1, G2):
+    I = emptyGraph()
+    for (L,R) in [(G1,G2), (G2,G1)]:
+        traverseGraph(L,
+                      lambda u: addNode(I, u) if u in R else None,
+                      lambda u,v: addEdge(I, u, v, L[u][v]) \
+                      if (v in R and L[u][v] == R[u][v]) else None)
+    return I
+############################################################ Boolean operations
+def graphForAll(G, f_v=None, f_e=None):
+    for u in G:
+        if f_v and not f_v(u):
+            return False
+        if not f_e: continue
+        for v in G[u]:
+            if not f_e(u, v):
+                return False
+    return True
+
+def graphIsSubset(G1, G2, f=lambda w1, w2: w1 == w2): # G1 subset_eq G2
+    def isSubset(u, v):
+        return u in G2 and v in G2[u] and f(G1[u][v], G2[u][v])
+    return graphForAll(G1, f_e=isSubset)
+
+def graphsEqual(G1, G2, f=lambda w1, w2: w1 == w2):
+    return graphIsSubset(G1, G2, f) and graphIsSubset(G2, G1, f)
+
+def checkCycle(G, path):
+    cost = 0.0
+    for u, v in zip(path, path[1:]+path[:1]):
+        if v not in G[u]:
+            return False, cost
+        cost += G[u][v]
+    return True, cost
 ############################################################ Graph generators
+def cycleGraph(n, label = 1):
+    G = emptyGraph(n)
+    for i in range(n):
+        addEdge(G, i, (i+1)%n, label, undir=True)
+    return G
+
+def completeGraph(n, label=1):
+    G = emptyGraph(n)
+    for i in range(n):
+        for j in range(i+1,n):
+            addEdge(G, i,j, label, undir=True)
+    return G
+
+def randomERGraph(n, p, seed = None): # Theta(n^2) independent of p
+    rng = np.random.default_rng(seed)
+    G = emptyGraph(n)
+    for i in range(n):
+        for j in range(i+1,n):
+            if (rng.random() < p):
+                addEdge(G, i, j, undir=True)
+    return G
+
+def randomERGraphFast(n, p, seed = None): # runs quicker when p small
+    # O(n+m) where m is the actual number of edges added
+    rng = np.random.default_rng(seed)
+    G = emptyGraph(n)
+    for i in range(n):
+        j = i
+        j = j + rng.geometric(p)
+        while j < n:
+            addEdge(G, i, j, undir=True)
+            j = j + rng.geometric(p)
+    return G 
+
 def sampleWoutReplace(n,d, exclude, rng):
     # generate d numbers without replacement from {0,...,n-1} - {exclude}.
     sample = [exclude]
@@ -140,32 +212,235 @@ def randomDigraphDegreeBound(n, d, seed=None):
                   lambda u: None,
                   scale_edge)    
     return G
-############################################################ Boolean operations
-def graphForAll(G, f_v=None, f_e=None):
+
+def randomDigraphWithSourceSink(n, d, greedy_fail, seed=None): # for FF
+    G = randomDigraphDegreeBound(n, d, seed)
+    makeDirected(G)
+    makeConnected(G)    
+    scale = lambda x: int(x*50)
+    def scale_edge(u, v):
+        G[u][v] = scale(G[u][v])
+    traverseGraph(G,
+                  lambda u: None,
+                  scale_edge)
+    s, t = n, n + 1
+    addNode(G, s)
+    addNode(G, t)
+    rng = np.random.default_rng(seed)
+    out_list = sampleWoutReplace(n, d, s, rng)
+    for nbr in out_list:
+        addEdge(G, s, nbr, label=scale(rng.random()))
+    in_list = sampleWoutReplace(n, d, t, rng)
+    for nbr in in_list:
+        addEdge(G, nbr, t, label=scale(rng.random()))
+    if greedy_fail:
+        addGreedyFailureFF(G, s, t, seed=seed)
+    return G, s, t
+
+def randomSignedDiGraph(n,d,q, seed = None):
+    G = randomDigraphDegreeBound(n, d, seed = seed)
+    rng = np.random.default_rng(seed)
+    def signEdge(u,v):
+        G[u][v] = -1 if rng.grandom() < q else 1
+    foreachEdge(G, signEdge) # Each edge given sign -1 with probability q
+    return G
+
+def oneNegCycle(n):
+    G = emptyGraph(n)
+    for i in range(n):
+        addEdge(G, i , (i+1)%n, 1)
+    G[0][1] = -n
+    return G
+############################################################ Traversals
+def traverseGraph(G, f_v, f_e, safe=False):
+    if safe:
+        traverseGraphSafe(G, f_v, f_e)
+        return
     for u in G:
-        if f_v and not f_v(u):
-            return False
-        if not f_e: continue
+        f_v(u)
         for v in G[u]:
-            if not f_e(u, v):
-                return False
-    return True
+            f_e(u, v)
 
-def graphIsSubset(G1, G2, f=lambda w1, w2: w1 == w2): # G1 subset_eq G2
-    def isSubset(u, v):
-        return u in G2 and v in G2[u] and f(G1[u][v], G2[u][v])
-    return graphForAll(G1, f_e=isSubset)
+def traverseGraphSafe(G, f_v, f_e): # safe since iterate over list
+    for (u,v) in E(G): f_e(u, v) # edges first since may delete nodes
+    for u in V(G): f_v(u)
 
+def BFS(G, s, exploreZeroEdges = True):
+    distances = {}                     # in terms of number of edges
+    parents = {}                       # parent of node in BFS tree
+    layers = [[] for d in range(N(G))] # lists of nodes at each distance.
+
+    finalized = set()
+    Q = queue.Queue(); Q.put(s)
+    distances[s] = 0; parents[s] = None;
+    while not(Q.empty()):
+        u = Q.get()
+        if u in finalized: continue
+        finalized.add(u)
+        layers[distances[u]].append(u) 
+        for v in G[u]:
+            if v in distances or (not exploreZeroEdges and G[u][v]==0): continue
+            parents[v] = u
+            distances[v] = distances[u] + 1
+            Q.put(v)
+
+    return distances, parents, layers
+
+def findAugmentingPath(G, s, t):
+    _, parents, _ = BFS(G, s, exploreZeroEdges=False)
+    if t not in parents:
+        return [], 0
+    v = t
+    ts_path = [v]
+    bottleneck = float('inf')
+    while v != s:
+        u = parents[v]
+        ts_path.append(u)
+        if G[u][v] < bottleneck:
+            bottleneck = G[u][v]
+        v = u
+    st_path = ts_path[::-1]
+    return st_path, bottleneck
+
+def DFS(G):
+    color = {}
+    discovered = {}
+    finished = {}
+    parent = {}
+    for u in G:
+        color[u] = "white"
+        parent[u] = None
+    timestamp = [0] # only element is the current value of the time stamp. 
+
+    def DFSVisit(u,  G, timestamp, color, discovered, finished):
+        # Only the first argument ever changes
+        color[u] = "gray"
+        timestamp[0] = timestamp[0] + 1
+        discovered[u] = timestamp[0]
+        for v in G[u]:
+            if color[v] == "white":
+                    parent[v] = u
+                    DFSVisit(v,  G, timestamp, color, discovered, finished)
+        color[u] = "black"
+        timestamp[0] = timestamp[0] + 1
+        finished[u] = timestamp[0]
+        return
+
+    for u in G:
+        if color[u] == "white":
+            DFSVisit(u, G, timestamp, color, discovered, finished)
+    return discovered, finished, parent
+
+def DFSstack(G):                # stack rather than recursion
+    color = {}
+    discovered = {}
+    finished = {}
+    parent = {}
+    stack = []
+    for u in G:
+        color[u] = "white"
+        parent[u] = None
+        stack.append((u, "discover"))
+    timestamp = 0     
+
+    while (stack != []):
+        (u, task) = stack.pop()
+        if task == "discover": # This is u's discovery
+            if color[u] == "white": # ignore u if it was already discovered
+                color[u] = "gray"
+                timestamp = timestamp + 1
+                discovered[u] = timestamp
+                stack.append((u, "finish"))
+                for v in G[u]:
+                    if color[v] == "white":
+                        parent[v] = u
+                        stack.append((v, "discover")) # Put v on list of nodes to discover.
+        else: # This means task == "finish". We are done exploring from u. 
+            color[u] = "black"
+            timestamp = timestamp + 1
+            finished[u] = timestamp
+    return discovered, finished, parent
+
+def dijkstra(G, s):             # assumes nonnegative path costs
+    distances = {}              # actual distances (sum of costs along path)
+    parents = {}                # parent of node in SP tree
+
+    finalized = set()           # set of discovered nodes
+    Q = []                      # empty priority queue
+    distances[s] = 0; parents[s] = None
+    heapq.heappush(Q, (distances[s], s))
+    while len(Q) > 0:
+        (d, u) = heapq.heappop(Q) # extract-min
+        if u in finalized: continue
+        finalized.add(u)
+        for v in G[u]:
+            new_length = distances[u] + G[u][v]
+            if v in distances and new_length < distances[v]: continue
+            distances[v] = new_length
+            parents[v] = u
+            heapq.heappush(Q, (distances[v], v)) 
+    return distances, parents
+
+############################################################ I/O functions
+def writeGraphF(G, f):          # sorted so identical graphs formatted same
+    for u in sorted(G):
+        f.write(f"{u}\n")
+        for v in sorted(G[u]):
+            if type(G[u][v]) == bool:
+                f.write(f"{u}, {v}\n") # unweighted
+            else:
+                f.write(f"{u}, {v}, {G[u][v]}\n") # weighted
+
+def readGraphF(f, intWeights=True):
+    G = emptyGraph()
+    cast = int if intWeights else float
+    raw = [[cast(x) for x in s.split(',')] for s in f.read().splitlines()]
+    for entry in raw:
+        if len(entry) == 1:  # node name
+            addNode(G, int(entry[0]))
+        elif len(entry) == 2:  # unweighted
+            addEdge(G, int(entry[0]), int(entry[1]))
+        elif len(entry) == 3:  # weighted
+            addEdge(G, int(entry[0]), int(entry[1]), label=cast(entry[2]))
+        else:
+            print("Incorrectly formatted entry ignored:", entry)
+    return G
+
+def writeGraph(G, output_file, args=()):
+    with open(output_file, 'w') as f:
+        args_header = 'args: '
+        for i, arg in enumerate(args):
+            if i == len(args) - 1:
+                args_header += f'{arg}\n'
+            else:
+                args_header += f'{arg}, '
+        if len(args) > 0:
+            f.write(args_header)
+        writeGraphF(G, f)
+                
+def readGraph(input_file):
+    args = None
+    with open(input_file, 'r') as f:
+        firstline = f.readline().strip()
+        if "args:" in firstline:
+            args = (map(int, firstline[len("args:"):].split(',')))
+        else:
+            f.seek(0)
+        G = readGraphF(f)
+    if args is None:
+        return G
+    else:
+        return G, args
+        
+############################################################ Gradescope
 import re
+from collections import defaultdict
 import timeout_decorator
 import subprocess, time
 from gradescope_utils.autograder_utils.decorators import *
 import unittest
-from collections import defaultdict
-    
-def graphsEqual(G1, G2, f=lambda w1, w2: w1 == w2):
-    return graphIsSubset(G1, G2, f) and graphIsSubset(G2, G1, f)
-############################################################ Gradescope
+from problems.problem import Problem
+
 def execTest(i, visibility, checkAnswer):
     in_file = f"tests/{visibility}/inputs/input{i:02d}.txt"
     out_file = f"tests/{visibility}/outputs/output{i:02d}.txt"
@@ -207,100 +482,255 @@ class Test(unittest.TestCase):  # auto generate tests
         def test_func(self):
             self.formatted_test_run(i, visibility, checkAnswer, test_description)
         return test_func
-def generate_test_methods(default_weights, custom_weights,
-                          checkAnswer, test_descriptions):
-    for visibility in default_weights:
+    
+def generate_test_methods(checkAnswer):
+    with open("tests/test_descriptions.txt", 'r') as f:
+        test_descriptions = [line for line in f]
+    
+    for visibility in set(Problem.VISIBILITY_MAP.values()) | {""}:
         dirpath = f"./tests/{visibility}/inputs"
         if not os.path.isdir(dirpath):
             continue
         for fname in sorted(os.listdir(dirpath)):
             i = int(re.findall(r'\d+', fname)[0])
-            if i in custom_weights:
-                w = custom_weights[i]
-            else:
-                w = default_weights[visibility]
+            w = 1
+            test_description = test_descriptions[i] if test_descriptions else "" 
             setattr(Test, f"test_{i}",
                     Test().generate_test(i, visibility, w,
-                                         checkAnswer, test_descriptions[i]))
+                                         checkAnswer, test_description))
+def assertValidFlow(exF, C, s, t, k, flow): # exF=flow graph, C=capacity graph
+    assert graphIsSubset(exF, C, lambda w1, w2: True), \
+        f"Nodes {N(exF)} != {N(C)}; Edges {M(exF)} != {M(C)} where F != G"
+    assert graphForAll(exF,f_e=lambda u,v: exF[u][v]>=0 and exF[u][v]<=C[u][v]),\
+        f"flow not in range [0, cap] on at least one edge"
+    xorEdge(exF, t, s, flow)
+    inF = copyGraph(exF)
+    reverseGraph(inF)
+    for u in inF:
+        in_f = sum(inF[u][v] for v in inF[u])
+        ex_f = sum(exF[u][v] for v in exF[u])
+        assert in_f == ex_f, f"Flow conservation failed on {u}"
+        if k != 0 and u not in (s,t):
+            assert in_f <= k, f"Node {u} surpassed capacity {k}"
+    xorEdge(exF, t, s, flow)
+
+def addGreedyFailureFF(G, s, t, seed=123):
+    random.seed(seed)
+    n = N(G)
+    L = 100
+    S = L - random.randrange(4, 60)
+    for i in range(6):
+        addNode(G, n + i)
+    addEdge(G, s, n, label=S)
+    addEdge(G, n, n + 1, label=S)
+    addEdge(G, n + 1, n + 2, label=S)
+    addEdge(G, n + 2, t, label=L)
+    addEdge(G, s, n + 3, label=L)
+    addEdge(G, n + 3, n + 2, label=L)
+    addEdge(G, n + 3, n + 4, label=S)
+    addEdge(G, n + 4, n + 5, label=S)
+    addEdge(G, n + 5, t, label=S)
 ############################################################ Assignment creation
-def create_starter_library(sol_file="solution/submission.py",
-                           lib_file="classlib.py"):
-    regex_fcall = r'\b([a-zA-Z_][a-zA-Z0-9_]*)\s*\('
-    regex_fdef = r'^\s*def\s+([a-zA-Z_][a-zA-Z0-9_]*)\s*\('
-    regex_section_header = r'^#{60}'
-    
-    with open(lib_file, "r") as f:
+import tree_sitter_python as ts
+import inspect, textwrap
+from datetime import datetime
+from tree_sitter import Language, Parser
+
+def get_problem_paths(problem_instances):
+    problem_classes = {instance.__class__.__name__ \
+                       for instance in problem_instances}
+    return [f"problems/{cls_name}.py" for cls_name in problem_classes]
+
+def create_test_files(problems):
+    problem_names = []
+    index = 0
+    for p in problems:
+        for param in p.getTestParams():
+            problem_names.append(p.createTest(index, param))
+            index += 1
+    with open("autograder/tests/test_descriptions.txt", 'w') as f:
+        for p in problem_names:
+            f.write(f"{p}\n")
+
+def extract_calls(u, code):
+    calls = set()
+    def rec_helper(u, code):
+        nonlocal calls
+        for v in u.children:
+            if u.type == "call" and v.type == "identifier":
+                name = code[v.start_byte:v.end_byte]
+                calls.add(name)
+            rec_helper(v, code)
+    rec_helper(u, code)
+    return calls
+
+def traverse_ast(root, f_uv):
+    def rec_helper(u):
+        for v in u.children:
+            f_uv(u, v)
+            rec_helper(v)
+    rec_helper(root)
+
+section_demarcation = "#" * 60
+def create_starter_library(lib_path="classlib.py",
+                           sublib_path="starter_code/classlib.py",
+                           dep_file_paths=["solution/submission.py"]):
+    LANGUAGE = Language(ts.language())
+    parser = Parser(LANGUAGE)
+    if os.path.exists(sublib_path):
+        os.remove(sublib_path) # remove temporary soft link
+    with open(lib_path, "r") as f:
         lib_code = f.read()
-    with open(sol_file, "r") as sol_file:
-        sol_code = sol_file.read()
-    sol_fcalls = set(re.findall(regex_fcall, sol_code))
-        
-    # foreach function get name, start, scope=indentation
-    lib_fdefs = {}              # name -> (start, indentation)
-    for match in re.finditer(regex_fdef, lib_code, flags=re.MULTILINE):
-        fname = match.group(1)
-        start = match.start()
-        line_start = lib_code.rfind('\n', 0, start)+1
-        line = lib_code[line_start:lib_code.find('\n', line_start)]
-        scope = len(line) - len(line.lstrip())
-        lib_fdefs[fname] = (start, scope)
-    G_dep = defaultdict(set)
-    defs_inorder = list(sorted(lib_fdefs.items(), key=lambda i: i[1][0]))
-    for i, (fname, (start, scope)) in enumerate(defs_inorder): # ordered by start
-        j = i + 1
-        end = len(lib_code)
-        while j < len(defs_inorder):
-            j_start = defs_inorder[j][1][0]
-            j_scope = defs_inorder[j][1][1]
-            if j_scope <= scope: # indentation, so less than means greater scope
-                end = j_start
-                break
-            j += 1
-        f_code = lib_code[start:end]
-        fcalls = re.findall(regex_fcall, f_code)
-        for f in fcalls:
-            if f in lib_fdefs:
-                G_dep[fname].add(f)
-                
-    def resolve_deps(funcs, graph): # resolve deps recursively
-        resolved = set(funcs)
-        stack = list(funcs)
-        while stack:
-            func = stack.pop()
-            for dep in graph[func]:
-                if dep not in resolved:
-                    resolved.add(dep)
-                    stack.append(dep)
-        return resolved
+        lib_tree = parser.parse(bytes(lib_code, "utf8"))
+    
+    calls = set()
+    for path in dep_file_paths:
+        with open(path, "r") as f:
+            code = f.read()
+            tree = parser.parse(bytes(code, "utf8"))
+        calls = calls.union(extract_calls(tree.root_node, code))
+    def get_defs(tree, code):
+        defs = {}
+        comments_and_imports = {}
+        i = 0
+        for u in tree.root_node.children:
+            if "definition" in u.type:
+                id_v = next((v for v in u.children if v.type=="identifier"), None)
+                if not id_v: continue
+                name = code[id_v.start_byte:id_v.end_byte]
+                defs[name] = u
+            elif "import" in u.type or u.type == "comment":
+                comments_and_imports[f"{u.type}_{i}"] = u
+                i += 1
+        return defs, comments_and_imports
 
-    required_f = resolve_deps(sol_fcalls, G_dep)
-    lines = lib_code.splitlines() # remove unused functions
-    starter_lib = []
-    skip = False
-    for i, line in enumerate(lines):
-        match = re.match(regex_fdef, line)
-        if match:
-            fname = match.group(1)
-            skip = fname not in required_f
-        elif re.match(regex_section_header, line):
-            skip = False
-        if not skip:
-            starter_lib.append(line)
-            
-    i = 0; pops = 0
-    while i + pops < len(starter_lib) - 1: # remove headers of empty sections
-        if re.match(regex_section_header, starter_lib[i]) and \
-           (re.match(regex_section_header, starter_lib[i+1])):
-            starter_lib.pop(i)
-            pops += 1
-            i -= 1
-        i += 1
-    while re.match(regex_section_header, starter_lib[-1]):
-        starter_lib.pop(-1)
+    defs, comments_and_imports = get_defs(lib_tree, lib_code)
+    processed = {}
+    while calls:
+        name = calls.pop()
+        if name not in defs or name in processed:
+            continue
+        u = defs[name]
+        processed[name] = u
+        nested_calls = extract_calls(u, lib_code)
+        calls.update(nested_calls)
 
-    start_lib_path = f"./starter_code/{lib_file}"
-    if os.path.exists(start_lib_path):
-        os.remove(start_lib_path)    # get rid of temporary sym link to full lib
-    with open(start_lib_path, "w") as f:
-        f.write("\n".join(starter_lib)) # create starter_lib = subset of full lib
-    print(f"Compiled starter_code/{lib_file} only containing functions needed.")
+    sorted_deps = sorted(processed.items() | comments_and_imports.items(),
+                         key=lambda i: i[1].start_byte)
+    constructs = {}
+    # always include first imports before any defs
+    # for future imports, only include if fdef in section included in sublib
+    after_first_def = False
+    not_def = lambda u: "definition" not in u.type
+    section = set()
+    added_def = False
+    for i, (name, u) in enumerate(sorted_deps):
+        block = lib_code[u.start_byte:u.end_byte]
+        if (section_demarcation in block or i == len(sorted_deps) - 1) and \
+           not added_def:
+            for j in section:
+                del constructs[j]
+        if i == len(sorted_deps) - 1:
+            break
+        if section_demarcation in block:
+            section.clear()
+            added_def = False
+        if not_def(u):
+            constructs[name] = f"{block}\n"
+            if after_first_def:
+                section.add(name)
+        else:
+            after_first_def = True
+            added_def = True
+            constructs[name] = f"{block}\n\n"
+    with open(sublib_path, "w") as f:
+        for construct in constructs.values():
+            f.write(construct)
+
+def unindent_once(code, indent_size=4):
+    lines = code.splitlines()
+    adjusted_lines = []
+    for line in lines:
+        if line.startswith(" " * indent_size):
+            adjusted_lines.append(line[indent_size:])
+        elif line.strip():
+            adjusted_lines.append(line)
+    return "\n".join(adjusted_lines)
+    
+def create_submissions(problem_paths, interpretCommandLineArgs):
+    LANGUAGE = Language(ts.language())
+    parser = Parser(LANGUAGE)
+    section_demarcation
+    sol_import_stub = f"\n{section_demarcation} for course staff\nsys.path.insert(0, os.path.abspath('..'))\nif os.path.exists('../solution/submission.py'):\n    from solution.submission import *\n{section_demarcation}\n\n"
+    constructs = {}
+    imports = set()
+    for problem_path in problem_paths:
+        with open(problem_path, "r") as file:
+            code = file.read()
+        tree = parser.parse(bytes(code, "utf8"))
+        imports.update(
+            f"{code[u.start_byte:u.end_byte]}\n"
+            for u in tree.root_node.children
+            if "import" in u.type
+        )
+        def f_uv(u, v):
+            if u.type != "function_definition" or v.type != "identifier":
+                return
+            fname = code[v.start_byte:v.end_byte]
+            if fname != "solution" and fname != "starter":
+                return
+            w = next((w for w in u.children if w.type == "block"), None)
+            new_fname = problem_path.split('/')[-1].split('.')[0]
+            if not new_fname[1].isupper():
+                new_fname = new_fname[0].lower() + new_fname[1:]
+            if new_fname in constructs and fname == "solution":
+                return
+            params = code[v.end_byte:w.start_byte]
+            new_params = "(" + ", " \
+                .join(part.strip() for part in params.strip("()").split(",") \
+                      if part.strip() != "self")
+            body = code[w.start_byte:u.end_byte]
+            new_body = unindent_once(body) + "\n"
+            fhead = f"def {new_fname}{new_params}"
+            constructs[new_fname] = (
+                f"{fhead}\n    {new_body}\n",
+                len(fhead)
+            )
+        traverse_ast(tree.root_node, f_uv)
+
+    for dir in ["starter_code", "solution"]:
+        with open(f"{dir}/submission.py", "w") as f:
+            pset = os.path.basename(os.getcwd())
+            timestamp = datetime.now().strftime("Created on %B %d, %Y")
+            section_header = f"{section_demarcation}\n# {'Starter' if dir == 'starter_code' else 'Solution'} code for {pset}\n# {timestamp}\n{section_demarcation}\n\n"
+            f.write(section_header)
+            for i in imports:
+                if "Problem" in i: continue
+                f.write(i)
+            f.write("\n")
+            for construct in constructs.values():
+                fdef = construct[0] if dir == "solution" else \
+                    construct[0][:construct[1]] \
+                    + "\n    return # TODO: implement\n"
+                f.write(fdef)
+            if dir == "starter_code":
+                f.write(sol_import_stub)
+            f.write(inspect.getsource(interpretCommandLineArgs))
+            f.write('\nif __name__ == "__main__":\n    interpretCommandLineArgs(sys.argv[1:])')
+
+def create_all_files(problems, interpretCommandLineArgs):
+    problem_paths = get_problem_paths(problems)
+    with open("autograder/tests/problem_paths.txt", "w") as f:
+        for p in problem_paths:
+            f.write(f"{p}\n")
+    create_test_files(problems)
+    create_submissions(problem_paths, interpretCommandLineArgs)
+    create_starter_library(
+        sublib_path="starter_code/classlib.py",
+        dep_file_paths=problem_paths + ["solution/submission.py"]
+    )
+    create_starter_library(
+        sublib_path="autograder/classlib.py",
+        dep_file_paths=problem_paths + \
+        ["solution/submission.py", "autograder/tests/test.py"]
+    )
