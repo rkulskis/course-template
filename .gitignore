@@ -5,6 +5,13 @@
 inputs
 outputs
 dist
+after_due_date
+after_published
+hidden
+visible
+starter_code
+solution
+*/autograder/tests/problems
 *.aux
 *.log
 *.out

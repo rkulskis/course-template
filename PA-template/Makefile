@@ -16,6 +16,7 @@ export STARTER_MAKEFILE
 all: clean
 	bash -c "mkdir -p $(TEST_DIRS) starter_code/tests solution"
 	bash -c "ln -sfrt ./autograder/tests ./autograder/$(CLASS_LIB)"
+	bash -c "ln -sfrt ./starter_code ./assignment-description.pdf"	
 	bash -c "ln -sfrt ./starter_code/tests ./autograder/tests/test_descriptions.txt"
 	bash -c "ln -sfrt ./starter_code/tests \
 ./autograder/tests/visible/{inputs,outputs}"
@@ -29,10 +30,10 @@ obsfucate-test-code:
 	--platform windows.x86_64 \
 	--platform linux.x86_64 \
 	--platform darwin.x86_64 \
-	test.py classlib.py $$(cat problem_paths.txt) problems/problem.py && \
+	test.py classlib.py $$(cat problem_paths.txt) && \
 	mkdir -p dist/problems && \
 	cd dist && \
-	mv $$(cat ../problem_paths.txt | xargs -n 1 basename) problem.py problems && \
+	mv $$(cat ../problem_paths.txt | xargs -n 1 basename) problems && \
 	cd .. && \
 	rm -rf problem_paths.txt && \
 	cd ..

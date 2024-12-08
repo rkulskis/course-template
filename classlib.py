@@ -532,6 +532,7 @@ def addGreedyFailureFF(G, s, t, seed=123):
     addEdge(G, n + 5, t, label=S)
 ############################################################ Assignment creation
 import tree_sitter_python as ts
+import ast
 import inspect, textwrap
 from datetime import datetime
 from tree_sitter import Language, Parser
@@ -567,8 +568,8 @@ def extract_calls(u, code):
 def traverse_ast(root, f_uv):
     def rec_helper(u):
         for v in u.children:
-            f_uv(u, v)
-            rec_helper(v)
+            if f_uv(u, v): # only explore subtree if return True
+                rec_helper(v)   
     rec_helper(root)
 
 section_demarcation = "#" * 60
@@ -660,7 +661,6 @@ def unindent_once(code, indent_size=4):
 def create_submissions(problem_paths, interpretCommandLineArgs):
     LANGUAGE = Language(ts.language())
     parser = Parser(LANGUAGE)
-    section_demarcation
     sol_import_stub = f"\n{section_demarcation} for course staff\nsys.path.insert(0, os.path.abspath('..'))\nif os.path.exists('../solution/submission.py'):\n    from solution.submission import *\n{section_demarcation}\n\n"
     constructs = {}
     imports = set()
@@ -675,16 +675,16 @@ def create_submissions(problem_paths, interpretCommandLineArgs):
         )
         def f_uv(u, v):
             if u.type != "function_definition" or v.type != "identifier":
-                return
+                return True
             fname = code[v.start_byte:v.end_byte]
             if fname != "solution" and fname != "starter":
-                return
+                return True
             w = next((w for w in u.children if w.type == "block"), None)
             new_fname = problem_path.split('/')[-1].split('.')[0]
             if not new_fname[1].isupper():
                 new_fname = new_fname[0].lower() + new_fname[1:]
             if new_fname in constructs and fname == "solution":
-                return
+                return True
             params = code[v.end_byte:w.start_byte]
             new_params = "(" + ", " \
                 .join(part.strip() for part in params.strip("()").split(",") \
@@ -696,6 +696,7 @@ def create_submissions(problem_paths, interpretCommandLineArgs):
                 f"{fhead}\n    {new_body}\n",
                 len(fhead)
             )
+            return True
         traverse_ast(tree.root_node, f_uv)
 
     for dir in ["starter_code", "solution"]:
@@ -718,11 +719,48 @@ def create_submissions(problem_paths, interpretCommandLineArgs):
             f.write(inspect.getsource(interpretCommandLineArgs))
             f.write('\nif __name__ == "__main__":\n    interpretCommandLineArgs(sys.argv[1:])')
 
+def create_problems_subset(problems):
+    os.makedirs("autograder/tests/problems", exist_ok=True)
+    problem_paths = get_problem_paths(problems) + ["problems/problem.py"]
+    LANGUAGE = Language(ts.language())
+    parser = Parser(LANGUAGE)
+    for p in problem_paths:
+        with open(p, "r") as file:
+            code = file.read()
+            tree = parser.parse(bytes(code, "utf8"))
+        exclude_bounds = []
+        def f_uv(u, v):
+            nonlocal exclude_bounds
+            if u.type == "function_definition" and v.type == "identifier":
+                fname = code[v.start_byte:v.end_byte]
+                if fname == "solution":
+                    exclude_bounds.append((u.start_byte, u.end_byte))
+                    return False
+                elif fname == "createTest":
+                    exclude_bounds.append((u.start_byte, u.end_byte))             
+                    return False                
+            if len(exclude_bounds) == 2:
+                return False
+            return True
+        traverse_ast(tree.root_node, f_uv)
+        filtered_code = ""; curr = 0
+        for (start,end) in sorted(exclude_bounds, key=lambda t: t[0]):
+            filtered_code += code[curr:start]
+            curr = end
+        filtered_code += code[curr:]
+        problem_name = os.path.basename(p)
+        output_path = os.path.join("autograder/tests/problems", problem_name)
+        with open(output_path, "w") as f_out:
+            f_out.write(filtered_code)
+    
 def create_all_files(problems, interpretCommandLineArgs):
-    problem_paths = get_problem_paths(problems)
+    create_problems_subset(problems)
+    problem_paths = [p for p in get_problem_paths(problems)]
+    print(problem_paths)
     with open("autograder/tests/problem_paths.txt", "w") as f:
         for p in problem_paths:
             f.write(f"{p}\n")
+        f.write(f"problems/problem.py\n")
     create_test_files(problems)
     create_submissions(problem_paths, interpretCommandLineArgs)
     create_starter_library(
