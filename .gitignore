@@ -11,9 +11,13 @@ hidden
 visible
 starter_code
 solution
-*/autograder/tests/problems
+*/**/problems
+*/autograder/tests/classlib.py
+*/autograder/classlib.py
+*PA*/classlib.py
 *.aux
 *.log
 *.out
 test_descriptions.txt
 student_output.txt
+submission.py

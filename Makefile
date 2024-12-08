@@ -1,3 +1,4 @@
+SHELL=/bin/bash
 # can change to your new PA to make everything
 DEMO_DIR = PA-template
 all: demo
@@ -9,3 +10,8 @@ demo:
 clean:
 	cat .gitignore | while read -r pattern; \
 	do find . -name "$$pattern" -exec rm -rf {} +; done
+	cat .gitignore | while read -r pattern; \
+	do find . \( -type f -o -type l \) -wholename "$$pattern" -exec rm {} +; done
+	cat .gitignore | while read -r pattern; \
+	do find . -type d -wholename "$$pattern" -exec rm -rf {} +; done
+

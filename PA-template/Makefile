@@ -15,6 +15,9 @@ export STARTER_MAKEFILE
 
 all: clean
 	bash -c "mkdir -p $(TEST_DIRS) starter_code/tests solution"
+	bash -c "ln -sfrt ./ ../problems/$(CLASS_LIB)"
+	bash -c "ln -sfrt ./ ../problems"
+	bash -c "ln -sfrt ./autograder ./starter_code/submission.py"
 	bash -c "ln -sfrt ./autograder/tests ./autograder/$(CLASS_LIB)"
 	bash -c "ln -sfrt ./starter_code ./assignment-description.pdf"	
 	bash -c "ln -sfrt ./starter_code/tests ./autograder/tests/test_descriptions.txt"
