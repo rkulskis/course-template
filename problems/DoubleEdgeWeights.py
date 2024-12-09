@@ -15,7 +15,7 @@ class DoubleEdgeWeights(Problem):
         writeGraph(G, self.testPath(index, visibility, 'input'))
         self.solution(G)
         writeGraph(G, self.testPath(index, visibility, 'output'))
-        return f"DoubleEdgeWeights: n={n}"
+        return f"n={n}"
 
     @classmethod
     def checkAnswer(cls, in_file, out_file, student_file):

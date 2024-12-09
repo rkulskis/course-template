@@ -234,14 +234,17 @@ def get_problem_paths(problem_instances):
     return [f"problems/{cls_name}.py" for cls_name in pclass_names]
 
 def create_test_files(problems):
-    problem_names = []
-    index = 0
+    test_descriptions = []; index = 0; classname_i = 0
+    pclass_names = [instance.__class__.__name__ for instance in problems]
     for p in problems:
         for param in p.getTestParams():
-            problem_names.append(p.createTest(index, param))
+            test_descriptions.append(
+                f"{pclass_names[classname_i]}: {p.createTest(index, param)}"
+            )
             index += 1
+        classname_i += 1
     with open("autograder/tests/test_descriptions.txt", 'w') as f:
-        for p in problem_names:
+        for p in test_descriptions:
             f.write(f"{p}\n")
 
 def extract_calls(u, code):
