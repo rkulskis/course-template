@@ -13,7 +13,61 @@ clean:
 endef
 export STARTER_MAKEFILE
 
+define AUTOGRADER_MAKEFILE
+all: test
+zip: clean
+	zip -r autograder.zip . -x "*submission.py"
+test:
+	python3 tests/test.py
+clean:
+	find . -name "__pycache__" -exec rm -rf {} +
+	find . -name "*~" -exec rm -rf {} +
+	find . -name "*.zip" -exec rm -rf {} +
+	find . -name "student_out*" -exec rm -rf {} +
+endef
+export AUTOGRADER_MAKEFILE
+
+define RUN_AUTOGRADER
+#!/usr/bin/env bash
+# Set up autograder files
+cp /autograder/submission/submission.py /autograder/source/ &> /dev/null
+cp /autograder/submission/submission.py /autograder/source/tests/
+cd /autograder/source
+python3 run_tests.py > /autograder/results/results.json
+endef
+export RUN_AUTOGRADER
+
+define RUN_TESTS
+import unittest
+from gradescope_utils.autograder_utils.json_test_runner import JSONTestRunner
+if __name__ == '__main__':
+    suite = unittest.defaultTestLoader.discover('tests')
+    JSONTestRunner(visibility='visible').run(suite)
+endef
+export RUN_TESTS
+
+define SETUP_SH
+#!/usr/bin/env bash
+apt-get -y install openjdk-11-jdk
+apt-get install -y python3 python3-pip python3-dev
+pip3 install -r /autograder/source/requirements.txt
+endef
+export SETUP_SH
+
+define REQUIREMENTS_TXT
+gradescope-utils
+numpy
+timeout-decorator
+endef
+export REQUIREMENTS_TXT
+
 all: clean
+	mkdir autograder
+	echo "$$AUTOGRADER_MAKEFILE" > autograder/Makefile
+	echo "$$RUN_AUTOGRADER" > autograder/run_autograder
+	echo "$$RUN_TESTS" > autograder/run_tests.py
+	echo "$$SETUP_SH" > autograder/setup.sh
+
 	bash -c "mkdir -p $(TEST_DIRS) starter_code/tests solution"
 	bash -c "ln -sfrt ./ ../problems/$(CLASS_LIB)"
 	bash -c "ln -sfrt ./ ../problems"

@@ -13,7 +13,7 @@ starter_code
 solution
 */**/problems
 tests
-*/autograder/classlib.py
+autograder
 *PA*/classlib.py
 *.aux
 *.log
