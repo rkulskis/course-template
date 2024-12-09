@@ -8,7 +8,8 @@ problems = [
     ])
 ]
 
-def interpretCommandLineArgs(args = []):
+# for generating {starter_code,solution}/submission.py
+def interpretCommandLineArgs(args = []): 
     USAGE = "Usage: python3 sumbission.py input_file output_file"
     assert len(args) == 2, USAGE
     input_file = args[0]

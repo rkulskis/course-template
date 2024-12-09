@@ -12,7 +12,7 @@ visible
 starter_code
 solution
 */**/problems
-*/autograder/tests/classlib.py
+tests
 */autograder/classlib.py
 *PA*/classlib.py
 *.aux

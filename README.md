@@ -1,5 +1,5 @@
 # Autograder template
-This template allows for course staff to easily create new assignments with 
+This template allows for course staff to easily create new assignments with
 maximal automation and speed.
 
 To pull this framework into an existing autograder repository run:
@@ -17,22 +17,58 @@ git pull upstream main --allow-unrelated-histories
 make demo
 ```
 
-Run `make zip` inside `starter_code/` and `autograder/` to get zip files for 
-`starter_code.zip` (for students) and `autograder.zip` (upload to gradescope).
-
 ### Customization
-To port to your own assignment add your:
-1. Library functions for the class to `classlib.py`
-2. Test creation code to `create_assignment_files.py`
-   * Run `make` in same directory to call this
-2. Test verification code to `test.py`
-3. Write a solution in `solution/submission.py`
-   * Run `make` inside `starter_code/`
-   * Run `make` inside `autograder/`
+To create a new assignment do the following - note that step 7 is equivalent to
+running steps 3 to 6 in one command:
+0. `cp -r PA-template PA-assignment-name` to make your new programming
+assignment directory
+1. Add any necessary library functions to `problems/classlib.py`
+2. For each part in your PA, create a new classfile in `problems/`
+   * Inherits from the problem abstract base class
+   * Implements:
+	 * solution(): solution for this problem
+		 * if you make `starter_solution()` then this will be included as the
+		 starter code function for this problem. These solution methods are
+		 compiled to the name of the class with the first letter in lowercase if
+		 the second letter of the class name is lowercase. E.g.:
+			 * `FindCycles.solution` becomes `findCycles()`
+			 * `BFS.solution` becomes `BFS()`
+	 * createTest(): create inputs and expected outputs as well as test
+	 descriptions
+	 * checkAnswer(): given {in,out}put.txt and student submission, return a
+	 bool for whether student passed as well as test run info
+3. In `PA-assignment-name/create_assignment_files.py`:
+   * Import all of your problem classes
+   * Create a `problems` list of class instances with test parameter lists for
+   each instance as the constructor agument
+   * Implement `interpretCommandLineArgs(args)` to read input and based on the
+   input file, apply one of your problem functions and write the output
+   * Run `make` in the same directory to autogenerate:
+	 * test files
+	 * `test.py`: autograder test script
+	 * `{starter_code,solution}/submission.py`
+	 * `classlib.py` files that are subsets of the entire classlib such that
+	 only the necessary functions are included in each compilation (e.g. student
+	 starter_code should only have necessary functions for the assignment as
+	 dictated by the `solution/submission.py`
+	 * Obsfucated version of autograder, i.e. undecipherable version with
+	 compiled libraries for each platform: darwin64, linux, windows. This is in
+	 `starter_code` for students, with only the visible inputs from
+	 autograder. Also, we exclude `createTest(),solution()` from problem class
+	 definitions to be absolutely sure there's no critical information in the
+	 starter code distribution
+4. Run `make` in `PA-assignment-name/autograder/` to run all tests
+5. Run `make` in `PA-assignment-name/starter_code/` to run all visible tests
+   * This runs the imported solution from `solution/submission.py` but you can
+   comment this out if you want for local testing
+6. Run `make zip` inside `PA-assignment-name` to make `starter_code.zip` (to
+distribute to the students) and `autograder.zip` to upload to gradescope
+7. To run all of steps 3-6 in one command, in the root of the repo run: `make
+DEMO_DIR=PA-assignment-name`
 
 ## Background
-Below is a `tree` of the code including descriptions for the files and how to use
-them. The template code just generates random graph tests for an assignment
+Below is a `tree` of the code including descriptions for the files and how to
+use them. The template code just generates random graph tests for an assignment
 which has one function, `doubleEdgeWeights()`.
 
 This structure is targeted toward comparing output files from python code
@@ -44,21 +80,18 @@ submissions, but can be extended to other languages as needed.
 .
 ├── Makefile
 ├── PA-template
-│   ├── assignment-description.pdf
-│   ├── assignment-description.tex ⭐
+│   ├── assignment-description.{tex,pdf} ⭐
 │   ├── autograder
 │   │   ├── Makefile
 │   │   ├── requirements.txt
 │   │   ├── run_autograder
 │   │   ├── run_tests.py
-│   │   ├── setup.sh
-│   │   └── tests
-│   │       └── test.py ⭐
+│   │   └── setup.sh
 │   ├── create_assignment_files.py ⭐
 │   └── Makefile
 ├── problems ⭐
 │   ├── classlib.py
-│   ├── DoubleEdgeWeights.py
+│   ├── {problems_for_this_PA,...}.py
 │   └── problem.py
 └── README.md
 ```
@@ -69,8 +102,7 @@ KEY:
 .
 ├── Makefile
 ├── PA-template
-│   ├── assignment-description.pdf
-│   ├── assignment-description.tex
+│   ├── assignment-description.{tex,pdf}
 │   ├── autograder
 │   │   ├── classlib.py ⚙️
 │   │   ├── Makefile
@@ -79,16 +111,16 @@ KEY:
 │   │   ├── run_tests.py
 │   │   ├── setup.sh
 │   │   ├── submission.py -> ../starter_code/submission.py ⚙️
-│   │   └── tests
-│   │       ├── {after_due_date, after_published, hidden, visible} ⚙️
+│   │   └── tests ⚙️
+│   │       ├── {after_due_date, after_published, hidden, visible}
 │   │       │   ├── inputs
 │   │       │   │   └── input{%2d}.txt
 │   │       │   └── outputs
 │   │       │       └── output{%2d}.txt
-│   │       ├── problems ⚙️
-│   │       │   ├── {problems_for_this_PA}.py
+│   │       ├── problems
+│   │       │   ├── {problems_for_this_PA,...}.py
 │   │       │   └── problem.py
-│   │       ├── test_descriptions.txt ⚙️
+│   │       ├── test_descriptions.txt
 │   │       └── test.py
 │   ├── autograder.zip ⚙️
 │   ├── classlib.py -> ../problems/classlib.py ⚙️
@@ -103,7 +135,7 @@ KEY:
 │   │   ├── dist
 │   │   │   ├── classlib.py
 │   │   │   ├── problems
-│   │   │   │   ├── {problems_for_this_PA}.py
+│   │   │   │   ├── {problems_for_this_PA,...}.py
 │   │   │   │   └── problem.py
 │   │   │   ├── pyarmor_runtime_000000
 │   │   │   │   ├── darwin_x86_64
