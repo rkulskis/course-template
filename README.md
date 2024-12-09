@@ -31,8 +31,16 @@ want to extend it to other languages as well as add:
  gradescope loading screen, waiting for all their results to arrive at the end.
  
  
+## Getting started
+
+## Creating a new repository with this template
+
+In the right-hand side of GitHub click the green box `Use this template` and
+create your own private clone of this repo.
+
 ## Porting to existing framework of code
-Because forks are not private, to pull this framework into your private course
+
+Alternatively, to pull this framework into your private course
 repository run:
 ```
 git remote add upstream git@github.com:rkulskis/autograder-template.git
@@ -42,7 +50,6 @@ echo "classlib.py merge=keeporigin" > .gitattributes
 git pull upstream main --allow-unrelated-histories
 ```
 
-## Getting started
 ### Demo
 ```bash
 # install some packages with pip, e.g. tree-sitter parser for code autogeneration
