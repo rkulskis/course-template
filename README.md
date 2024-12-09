@@ -1,6 +1,19 @@
 # Autograder template
+
+## About
 This template allows for course staff to easily create new assignments with
-maximal automation and speed.
+maximal automation and speed. The goal is to standardize the creation of 
+autograders and minimize the footprint of non-boiler-plate code. 
+
+Currently this is a python-based framework for python assignments; however, I
+want to extend it to other languages as well as add:
+ * enhanced security features
+ * plagiarism checkers
+ * portability to grade assignments on your own cluster to circumvent potential
+   kernel incompatibilities with a custom interface for self-hosting and
+   grading code (c.f. [NERC_autograder](https://github.com/OpenOSOrg/NERCautograder))
+ * support for other languages, e.g. Java, C, C++, Go, Rust, SQL
+ * GitHub
 
 To pull this framework into an existing autograder repository run:
 ```
