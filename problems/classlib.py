@@ -9,15 +9,32 @@ import numpy as np
 ############################################################ Adjacency list
 def emptyGraph(n=0):
     return {i: {} for i in range(n)}
-
 ############################################################ Nodes
+def N(G): return len(G)                    # N = nodes cardinality
 def V(G): return {u for u in G}            # V = nodes set
 
 def addNode(G, u):
     if u not in G:
         G[u] = {}
+    
+def delNode(G, u, delIncomingEdges=False):
+    if u not in G:
+        return
+    if delIncomingEdges:
+        foreachEdge(G, lambda a,b: delEdge(a,b) if b == u else None)
+    del G[u]
+    
+def xorNode(G, u):
+    addNode(G,u) if u not in G else delNode(G,u)
+    
+def foreachNode(G, f_v, safe=False):
+    s = lambda G: V(G) if safe else G
+    for u in s(G): f_v(u)
 
+def degree(G, u):
+    return len(G[u])
 ############################################################ Edges
+def M(G): return sum(len(G[u]) for u in G) # M = edges cardinality
 def E(G):                                  # E = edges set
     E = set()
     foreachEdge(G, lambda u,v: E.add((u,v)))
@@ -34,11 +51,31 @@ def addEdge(G, u, v, label=True, f=None, undir=False):
     if undir:
         G[v][u] = G[u][v]
 
+def delEdge(G, u, v, undirected=False):
+    if not undirected and v in G[u]:
+        del G[u][v]
+    elif undirected and v in G[u] and u in G[v]:
+        del G[u][v]
+        del G[v][u]
+        
+def xorEdge(G, u, v, label=True, f=None, undir=False):
+    if u in G and v in G[u]:
+        delEdge(G, u, v)
+    else:
+        addEdge(G, u, v, label, f, undir)
+
 def foreachEdge(G, f_e, safe=False):
     if safe:
         for (u,v) in E(G): f_e(u,v)
     else:
         traverseGraph(G, lambda u: None, f_e)
+############################################################ Set-like operations
+def copyGraph(G):               # deep copy
+    C = emptyGraph()
+    traverseGraph(G,
+                  lambda u: addNode(C, u),
+                  lambda u,v: addEdge(C, u, v, G[u][v]))
+    return C
 
 ############################################################ Boolean operations
 def graphForAll(G, f_v=None, f_e=None):
@@ -87,7 +124,6 @@ def randomDigraphDegreeBound(n, d, seed=None):
                   lambda u: None,
                   scale_edge)    
     return G
-
 ############################################################ Traversals
 def traverseGraph(G, f_v, f_e, safe=False):
     if safe:
@@ -101,7 +137,7 @@ def traverseGraph(G, f_v, f_e, safe=False):
 def traverseGraphSafe(G, f_v, f_e): # safe since iterate over list
     for (u,v) in E(G): f_e(u, v) # edges first since may delete nodes
     for u in V(G): f_v(u)
-
+    
 ############################################################ I/O functions
 def writeGraphF(G, f):          # sorted so identical graphs formatted same
     for u in sorted(G):
@@ -138,13 +174,13 @@ def writeGraph(G, output_file, args=()):
         if len(args) > 0:
             f.write(args_header)
         writeGraphF(G, f)
-
+                
 def readGraph(input_file):
     args = None
     with open(input_file, 'r') as f:
         firstline = f.readline().strip()
         if "args:" in firstline:
-            args = (map(int, firstline[len("args:"):].split(',')))
+            args = list(map(int, firstline[len("args:"):].split(',')))
         else:
             f.seek(0)
         G = readGraphF(f)
@@ -152,7 +188,6 @@ def readGraph(input_file):
         return G
     else:
         return G, args
-
 ############################################################ Gradescope
 import re
 from collections import defaultdict
@@ -377,8 +412,8 @@ def create_submissions(problem_paths, interpretCommandLineArgs):
             new_fname = problem_path.split('/')[-1].split('.')[0]
             if not new_fname[1].isupper():
                 new_fname = new_fname[0].lower() + new_fname[1:]
-            if new_fname in constructs and fname == "solution":
-                return True
+            if  fname == "starter":
+                new_fname = f"{fname}_{new_fname}"
             params = code[v.end_byte:w.start_byte]
             new_params = "(" + ", " \
                 .join(part.strip() for part in params.strip("()").split(",") \
@@ -393,20 +428,29 @@ def create_submissions(problem_paths, interpretCommandLineArgs):
             return True
         traverse_ast(tree.root_node, f_uv)
 
-    for dir in ["starter_code", "solution"]:
+    for dir in ["solution", "starter_code"]:
         with open(f"{dir}/submission.py", "w") as f:
             pset = os.path.basename(os.getcwd())
             timestamp = datetime.now().strftime("Created on %B %d, %Y")
             section_header = f"{section_demarcation}\n# {'Starter' if dir == 'starter_code' else 'Solution'} code for {pset}\n# {timestamp}\n{section_demarcation}\n\n"
             f.write(section_header)
-            for i in imports:
-                if "Problem" in i: continue
-                f.write(i)
-            f.write("\n")
-            for construct in constructs.values():
-                fdef = construct[0] if dir == "solution" else \
-                    construct[0][:construct[1]] \
-                    + "\n    return # TODO: implement\n"
+            # for i in imports:
+                # if ".problem" in i: continue
+                # f.write(i)
+            f.write("from classlib import *\n\n")
+            for fname, construct in constructs.items():
+                if f"starter_{fname}" in constructs and dir == "starter_code":
+                    continue
+                if fname.startswith("starter_"):
+                    if dir == "solution":
+                        continue
+                    fdef = construct[0]
+                    fdef = re.sub(r"starter_", "", fdef)
+                else:
+                    fdef = construct[0] if dir == "solution" else \
+                        construct[0][:construct[1]] \
+                        + "\n    return # TODO: implement\n"
+                fdef = re.sub(r"\.solution\(self,", "(", fdef)
                 f.write(fdef)
             if dir == "starter_code":
                 f.write(sol_import_stub)
