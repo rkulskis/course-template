@@ -14,6 +14,9 @@ git pull upstream main --allow-unrelated-histories
 ## Getting started
 ### Demo
 ```bash
+# install some packages with pip, e.g. tree-sitter parser for code autogeneration
+make install 
+# demo all of the code generation with PA-template, test running, and zipping
 make demo
 ```
 

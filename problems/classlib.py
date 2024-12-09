@@ -9,32 +9,15 @@ import numpy as np
 ############################################################ Adjacency list
 def emptyGraph(n=0):
     return {i: {} for i in range(n)}
+
 ############################################################ Nodes
-def N(G): return len(G)                    # N = nodes cardinality
 def V(G): return {u for u in G}            # V = nodes set
 
 def addNode(G, u):
     if u not in G:
         G[u] = {}
-    
-def delNode(G, u, delIncomingEdges=False):
-    if u not in G:
-        return
-    if delIncomingEdges:
-        foreachEdge(G, lambda a,b: delEdge(a,b) if b == u else None)
-    del G[u]
-    
-def xorNode(G, u):
-    addNode(G,u) if u not in G else delNode(G,u)
-    
-def foreachNode(G, f_v, safe=False):
-    s = lambda G: V(G) if safe else G
-    for u in s(G): f_v(u)
 
-def degree(G, u):
-    return len(G[u])
 ############################################################ Edges
-def M(G): return sum(len(G[u]) for u in G) # M = edges cardinality
 def E(G):                                  # E = edges set
     E = set()
     foreachEdge(G, lambda u,v: E.add((u,v)))
@@ -51,79 +34,12 @@ def addEdge(G, u, v, label=True, f=None, undir=False):
     if undir:
         G[v][u] = G[u][v]
 
-def delEdge(G, u, v, undirected=False):
-    if not undirected and v in G[u]:
-        del G[u][v]
-    elif undirected and v in G[u] and u in G[v]:
-        del G[u][v]
-        del G[v][u]
-        
-def xorEdge(G, u, v, label=True, f=None, undir=False):
-    if u in G and v in G[u]:
-        delEdge(G, u, v)
-    else:
-        addEdge(G, u, v, label, f, undir)
-
 def foreachEdge(G, f_e, safe=False):
     if safe:
         for (u,v) in E(G): f_e(u,v)
     else:
         traverseGraph(G, lambda u: None, f_e)
-############################################################ Set-like operations
-def copyGraph(G):               # deep copy
-    C = emptyGraph()
-    traverseGraph(G,
-                  lambda u: addNode(C, u),
-                  lambda u,v: addEdge(C, u, v, G[u][v]))
-    return C
 
-def makeUndirected(G):          # ensure every (u,v) has a (v,u)
-    foreachEdge(G, lambda u,v: addEdge(G, v,u, G[u][v]))
-    return G
-
-def makeDirected(G):
-    foreachEdge(G, lambda u,v: delEdge(G, v,u), safe=True)
-    return G
-
-def makeConnected(G):
-    def addChild(u):  # adds edge to node that is not parent of u
-        for v in G:
-            if u not in G[v]:
-                addEdge(G, u, v, label=4)
-                
-    foreachNode(G, lambda u: addChild if degree(G,u) == 0 else None)
-    return G
-
-def reverseGraph(G):
-    def reverseEdge(u,v):
-        addEdge(G, v, u, G[u][v])
-        delEdge(G, u, v)
-    foreachEdge(G, reverseEdge, safe=True)
-    return G
-
-def mergeGraph(G1, G2, f=lambda w1, w2: w1 + w2): # default behavior: G1 + G2
-    traverseGraph(G2,
-                  lambda u: addNode(G1,u),
-                  lambda u,v: addEdge(G1, u, v, G2[u][v], f=f))
-    return G1
-
-def subtractGraph(G1, G2, subtractNodes=False):      # G1 - G2
-    def rmG_n(u):
-        delNode(G1, u)     
-    traverseGraph(G2,
-                  lambda u: rmG_n if subtractNodes else None,
-                  lambda u,v: delEdge(G1, u, v),
-                  safe=True)
-    return G1
-
-def intersectGraphs(G1, G2):
-    I = emptyGraph()
-    for (L,R) in [(G1,G2), (G2,G1)]:
-        traverseGraph(L,
-                      lambda u: addNode(I, u) if u in R else None,
-                      lambda u,v: addEdge(I, u, v, L[u][v]) \
-                      if (v in R and L[u][v] == R[u][v]) else None)
-    return I
 ############################################################ Boolean operations
 def graphForAll(G, f_v=None, f_e=None):
     for u in G:
@@ -143,48 +59,7 @@ def graphIsSubset(G1, G2, f=lambda w1, w2: w1 == w2): # G1 subset_eq G2
 def graphsEqual(G1, G2, f=lambda w1, w2: w1 == w2):
     return graphIsSubset(G1, G2, f) and graphIsSubset(G2, G1, f)
 
-def checkCycle(G, path):
-    cost = 0.0
-    for u, v in zip(path, path[1:]+path[:1]):
-        if v not in G[u]:
-            return False, cost
-        cost += G[u][v]
-    return True, cost
 ############################################################ Graph generators
-def cycleGraph(n, label = 1):
-    G = emptyGraph(n)
-    for i in range(n):
-        addEdge(G, i, (i+1)%n, label, undir=True)
-    return G
-
-def completeGraph(n, label=1):
-    G = emptyGraph(n)
-    for i in range(n):
-        for j in range(i+1,n):
-            addEdge(G, i,j, label, undir=True)
-    return G
-
-def randomERGraph(n, p, seed = None): # Theta(n^2) independent of p
-    rng = np.random.default_rng(seed)
-    G = emptyGraph(n)
-    for i in range(n):
-        for j in range(i+1,n):
-            if (rng.random() < p):
-                addEdge(G, i, j, undir=True)
-    return G
-
-def randomERGraphFast(n, p, seed = None): # runs quicker when p small
-    # O(n+m) where m is the actual number of edges added
-    rng = np.random.default_rng(seed)
-    G = emptyGraph(n)
-    for i in range(n):
-        j = i
-        j = j + rng.geometric(p)
-        while j < n:
-            addEdge(G, i, j, undir=True)
-            j = j + rng.geometric(p)
-    return G 
-
 def sampleWoutReplace(n,d, exclude, rng):
     # generate d numbers without replacement from {0,...,n-1} - {exclude}.
     sample = [exclude]
@@ -213,44 +88,6 @@ def randomDigraphDegreeBound(n, d, seed=None):
                   scale_edge)    
     return G
 
-def randomDigraphWithSourceSink(n, d, greedy_fail, seed=None): # for FF
-    G = randomDigraphDegreeBound(n, d, seed)
-    makeDirected(G)
-    makeConnected(G)    
-    scale = lambda x: int(x*50)
-    def scale_edge(u, v):
-        G[u][v] = scale(G[u][v])
-    traverseGraph(G,
-                  lambda u: None,
-                  scale_edge)
-    s, t = n, n + 1
-    addNode(G, s)
-    addNode(G, t)
-    rng = np.random.default_rng(seed)
-    out_list = sampleWoutReplace(n, d, s, rng)
-    for nbr in out_list:
-        addEdge(G, s, nbr, label=scale(rng.random()))
-    in_list = sampleWoutReplace(n, d, t, rng)
-    for nbr in in_list:
-        addEdge(G, nbr, t, label=scale(rng.random()))
-    if greedy_fail:
-        addGreedyFailureFF(G, s, t, seed=seed)
-    return G, s, t
-
-def randomSignedDiGraph(n,d,q, seed = None):
-    G = randomDigraphDegreeBound(n, d, seed = seed)
-    rng = np.random.default_rng(seed)
-    def signEdge(u,v):
-        G[u][v] = -1 if rng.grandom() < q else 1
-    foreachEdge(G, signEdge) # Each edge given sign -1 with probability q
-    return G
-
-def oneNegCycle(n):
-    G = emptyGraph(n)
-    for i in range(n):
-        addEdge(G, i , (i+1)%n, 1)
-    G[0][1] = -n
-    return G
 ############################################################ Traversals
 def traverseGraph(G, f_v, f_e, safe=False):
     if safe:
@@ -264,122 +101,6 @@ def traverseGraph(G, f_v, f_e, safe=False):
 def traverseGraphSafe(G, f_v, f_e): # safe since iterate over list
     for (u,v) in E(G): f_e(u, v) # edges first since may delete nodes
     for u in V(G): f_v(u)
-
-def BFS(G, s, exploreZeroEdges = True):
-    distances = {}                     # in terms of number of edges
-    parents = {}                       # parent of node in BFS tree
-    layers = [[] for d in range(N(G))] # lists of nodes at each distance.
-
-    finalized = set()
-    Q = queue.Queue(); Q.put(s)
-    distances[s] = 0; parents[s] = None;
-    while not(Q.empty()):
-        u = Q.get()
-        if u in finalized: continue
-        finalized.add(u)
-        layers[distances[u]].append(u) 
-        for v in G[u]:
-            if v in distances or (not exploreZeroEdges and G[u][v]==0): continue
-            parents[v] = u
-            distances[v] = distances[u] + 1
-            Q.put(v)
-
-    return distances, parents, layers
-
-def findAugmentingPath(G, s, t):
-    _, parents, _ = BFS(G, s, exploreZeroEdges=False)
-    if t not in parents:
-        return [], 0
-    v = t
-    ts_path = [v]
-    bottleneck = float('inf')
-    while v != s:
-        u = parents[v]
-        ts_path.append(u)
-        if G[u][v] < bottleneck:
-            bottleneck = G[u][v]
-        v = u
-    st_path = ts_path[::-1]
-    return st_path, bottleneck
-
-def DFS(G):
-    color = {}
-    discovered = {}
-    finished = {}
-    parent = {}
-    for u in G:
-        color[u] = "white"
-        parent[u] = None
-    timestamp = [0] # only element is the current value of the time stamp. 
-
-    def DFSVisit(u,  G, timestamp, color, discovered, finished):
-        # Only the first argument ever changes
-        color[u] = "gray"
-        timestamp[0] = timestamp[0] + 1
-        discovered[u] = timestamp[0]
-        for v in G[u]:
-            if color[v] == "white":
-                    parent[v] = u
-                    DFSVisit(v,  G, timestamp, color, discovered, finished)
-        color[u] = "black"
-        timestamp[0] = timestamp[0] + 1
-        finished[u] = timestamp[0]
-        return
-
-    for u in G:
-        if color[u] == "white":
-            DFSVisit(u, G, timestamp, color, discovered, finished)
-    return discovered, finished, parent
-
-def DFSstack(G):                # stack rather than recursion
-    color = {}
-    discovered = {}
-    finished = {}
-    parent = {}
-    stack = []
-    for u in G:
-        color[u] = "white"
-        parent[u] = None
-        stack.append((u, "discover"))
-    timestamp = 0     
-
-    while (stack != []):
-        (u, task) = stack.pop()
-        if task == "discover": # This is u's discovery
-            if color[u] == "white": # ignore u if it was already discovered
-                color[u] = "gray"
-                timestamp = timestamp + 1
-                discovered[u] = timestamp
-                stack.append((u, "finish"))
-                for v in G[u]:
-                    if color[v] == "white":
-                        parent[v] = u
-                        stack.append((v, "discover")) # Put v on list of nodes to discover.
-        else: # This means task == "finish". We are done exploring from u. 
-            color[u] = "black"
-            timestamp = timestamp + 1
-            finished[u] = timestamp
-    return discovered, finished, parent
-
-def dijkstra(G, s):             # assumes nonnegative path costs
-    distances = {}              # actual distances (sum of costs along path)
-    parents = {}                # parent of node in SP tree
-
-    finalized = set()           # set of discovered nodes
-    Q = []                      # empty priority queue
-    distances[s] = 0; parents[s] = None
-    heapq.heappush(Q, (distances[s], s))
-    while len(Q) > 0:
-        (d, u) = heapq.heappop(Q) # extract-min
-        if u in finalized: continue
-        finalized.add(u)
-        for v in G[u]:
-            new_length = distances[u] + G[u][v]
-            if v in distances and new_length < distances[v]: continue
-            distances[v] = new_length
-            parents[v] = u
-            heapq.heappush(Q, (distances[v], v)) 
-    return distances, parents
 
 ############################################################ I/O functions
 def writeGraphF(G, f):          # sorted so identical graphs formatted same
@@ -417,7 +138,7 @@ def writeGraph(G, output_file, args=()):
         if len(args) > 0:
             f.write(args_header)
         writeGraphF(G, f)
-                
+
 def readGraph(input_file):
     args = None
     with open(input_file, 'r') as f:
@@ -431,16 +152,15 @@ def readGraph(input_file):
         return G
     else:
         return G, args
-        
+
 ############################################################ Gradescope
 import re
 from collections import defaultdict
-import timeout_decorator
 import subprocess, time
+import timeout_decorator
 from gradescope_utils.autograder_utils.decorators import *
 import unittest
 from problems.problem import Problem
-
 def execTest(i, visibility, checkAnswer):
     in_file = f"tests/{visibility}/inputs/input{i:02d}.txt"
     out_file = f"tests/{visibility}/outputs/output{i:02d}.txt"
@@ -482,7 +202,7 @@ class Test(unittest.TestCase):  # auto generate tests
         def test_func(self):
             self.formatted_test_run(i, visibility, checkAnswer, test_description)
         return test_func
-    
+
 def generate_test_methods(problemClasses):
     with open("tests/test_descriptions.txt", 'r') as f:
         test_descriptions = [line for line in f]
@@ -502,38 +222,6 @@ def generate_test_methods(problemClasses):
             setattr(Test, f"test_{i}",
                     Test().generate_test(i, visibility, w,
                                          pclass.checkAnswer, test_description))
-def assertValidFlow(exF, C, s, t, k, flow): # exF=flow graph, C=capacity graph
-    assert graphIsSubset(exF, C, lambda w1, w2: True), \
-        f"Nodes {N(exF)} != {N(C)}; Edges {M(exF)} != {M(C)} where F != G"
-    assert graphForAll(exF,f_e=lambda u,v: exF[u][v]>=0 and exF[u][v]<=C[u][v]),\
-        f"flow not in range [0, cap] on at least one edge"
-    xorEdge(exF, t, s, flow)
-    inF = copyGraph(exF)
-    reverseGraph(inF)
-    for u in inF:
-        in_f = sum(inF[u][v] for v in inF[u])
-        ex_f = sum(exF[u][v] for v in exF[u])
-        assert in_f == ex_f, f"Flow conservation failed on {u}"
-        if k != 0 and u not in (s,t):
-            assert in_f <= k, f"Node {u} surpassed capacity {k}"
-    xorEdge(exF, t, s, flow)
-
-def addGreedyFailureFF(G, s, t, seed=123):
-    random.seed(seed)
-    n = N(G)
-    L = 100
-    S = L - random.randrange(4, 60)
-    for i in range(6):
-        addNode(G, n + i)
-    addEdge(G, s, n, label=S)
-    addEdge(G, n, n + 1, label=S)
-    addEdge(G, n + 1, n + 2, label=S)
-    addEdge(G, n + 2, t, label=L)
-    addEdge(G, s, n + 3, label=L)
-    addEdge(G, n + 3, n + 2, label=L)
-    addEdge(G, n + 3, n + 4, label=S)
-    addEdge(G, n + 4, n + 5, label=S)
-    addEdge(G, n + 5, t, label=S)
 ############################################################ Assignment creation
 import tree_sitter_python as ts
 import ast
