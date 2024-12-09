@@ -2,20 +2,38 @@
 
 ## About
 This template allows for course staff to easily create new assignments with
-maximal automation and speed. The goal is to standardize the creation of 
-autograders and minimize the footprint of non-boiler-plate code. 
+maximal automation and speed. The goal is to standardize the creation of
+autograders and minimize the footprint of non-boiler-plate code.
 
 Currently this is a python-based framework for python assignments; however, I
 want to extend it to other languages as well as add:
- * enhanced security features
- * plagiarism checkers
- * portability to grade assignments on your own cluster to circumvent potential
-   kernel incompatibilities with a custom interface for self-hosting and
-   grading code (c.f. [NERC_autograder](https://github.com/OpenOSOrg/NERCautograder))
- * support for other languages, e.g. Java, C, C++, Go, Rust, SQL
- * GitHub
-
-To pull this framework into an existing autograder repository run:
+ * **enhanced security features**: currently code has 5 second timeout and is ran
+ as a subprocess; however, I want to add socket and filesystem reduced privilege
+ for the student code as well as nonce hashes of output to ensure student code
+ cannot fabricate fake results in the results.json.
+ * **plagiarism checkers**: against the solution and all past submissions. Probably
+ do this asynchronously as a daemon process since only the course staff should 
+ see the results of whether a student submission was possibly plagiarized.
+ * **portability to grade assignments on your own cluster** to circumvent potential
+   kernel incompatibilities with a custom interface for self-hosting and grading
+   code (c.f. [NERC_autograder](https://github.com/OpenOSOrg/NERCautograder))
+ * **support for other languages**, e.g. Java, C, C++, Go, Rust, SQL. This requires
+ polymorphism in the code AST parsing because tree-sitter has different node
+ names for different languages. Hopefully this shouldn't be too difficult.
+ * **Integration with GitHub repos/organizations** so you can have an organization
+ for your course (e.g. Boston-University-CS330) and a repo for each year with a
+ starter code directory for each assignment in the student repo, and a private
+ course repo for each year with corresponding source code
+ * **Integration with GitHub classroom** (since it's free! and gradescope is not
+ free). Additionally, this requires student to use git which is an essential
+ programming skill. Also, the GitHub actions show live results so students
+ can see which tests they pass/fail in real-time rather than looking at the 
+ gradescope loading screen, waiting for all their results to arrive at the end.
+ 
+ 
+## Porting to existing framework of code
+Because forks are not private, to pull this framework into your private course
+repository run:
 ```
 git remote add upstream git@github.com:rkulskis/autograder-template.git
 git remote set-url --push upstream no_push
