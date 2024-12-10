@@ -52,6 +52,7 @@ define SETUP_SH
 apt-get -y install openjdk-11-jdk
 apt-get install -y python3 python3-pip python3-dev firejail
 pip3 install -r /autograder/source/requirements.txt
+mkdir -p /run/firejail/dbus			# necessary for firejail mount
 endef
 export SETUP_SH
 
