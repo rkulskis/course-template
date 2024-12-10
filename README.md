@@ -32,6 +32,12 @@ want to extend it to other languages as well as add:
  * **support for other languages**, e.g. Java, C, C++, Go, Rust, SQL. This
  requires polymorphism in the code AST parsing because tree-sitter has different
  node names for different languages. Hopefully this shouldn't be too difficult.
+ * **suite of more complex tests**: e.g.:
+	 * OOP parse Java directory to give points for properly implemented design
+	 patterns.
+	 * Big-Oh comparison of student code to solution code
+	 * Screenshotting of pyplot output to verify for example that running the
+	 student code yields the correct classification of data points
  
 ## Getting started
 
