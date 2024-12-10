@@ -196,19 +196,37 @@ import timeout_decorator
 from gradescope_utils.autograder_utils.decorators import *
 import unittest
 from problems.problem import Problem
+
 def execTest(i, visibility, checkAnswer):
-    in_file = f"tests/{visibility}/inputs/input{i:02d}.txt"
-    out_file = f"tests/{visibility}/outputs/output{i:02d}.txt"
+    cwd = os.getcwd()
+    in_file = f"{cwd}/tests/{visibility}/inputs/input{i:02d}.txt"
+    out_file = f"{cwd}/tests/{visibility}/outputs/output{i:02d}.txt"
     student_out_file = f"student_output.txt"
-    
+    with open(student_out_file, "w") as f:
+        f.write("w")
     time_bound = 60
     start = time.time()
     try:
-        ret = subprocess.run(['python3', f"submission.py",
-                                    in_file, student_out_file],
-                                   stderr=subprocess.PIPE,
-                                   stdout=subprocess.PIPE,
-                                   timeout=time_bound)
+        firejail = [
+            'firejail',
+            '--nonewprivs',
+            '--nogroups',
+            '--seccomp',
+            '--net=none',
+            f'--whitelist={in_file}',
+            f'--whitelist={cwd}/submission.py',
+            f'--whitelist={cwd}/problems',
+            f'--whitelist={cwd}/classlib.py',
+            f'--whitelist={cwd}/{student_out_file}',
+        ]
+        ret = subprocess.run(
+            firejail + ['python3', '-c',
+                        f"import sys; sys.path.append('{cwd}'); \
+                        from submission import *; \
+                        interpretCommandLineArgs(sys.argv[1:])",
+                        in_file, student_out_file],
+            stderr=subprocess.PIPE, stdout=subprocess.PIPE, timeout=time_bound
+        )
     except subprocess.TimeoutExpired:
         return False, f'Program ran longer than {time_bound:.2f} seconds.'
     end = time.time()
@@ -522,7 +540,158 @@ def create_all_files(problems, interpretCommandLineArgs):
         dep_file_paths=problem_paths + ["solution/submission.py"]
     )
     create_sublib(
-        sublib_path="autograder/classlib.py",
+        sublib_path="autograder/tests/classlib.py",
         dep_file_paths=problem_paths + \
         ["solution/submission.py", "autograder/tests/test.py"]
     )
+############################################################ PA3
+def subtractGraph(G1, G2, subtractNodes=False):      # G1 - G2
+    def rmG_n(u):
+        delNode(G1, u)     
+    traverseGraph(G2,
+                  lambda u: rmG_n if subtractNodes else None,
+                  lambda u,v: delEdge(G1, u, v),
+                  safe=True)
+    return G1
+
+def reverseGraph(G):
+    def reverseEdge(u,v):
+        addEdge(G, v, u, G[u][v])
+        delEdge(G, u, v)
+    foreachEdge(G, reverseEdge, safe=True)
+    return G
+
+def BFS(G, s, exploreZeroEdges = True):
+    distances = {}                     # in terms of number of edges
+    parents = {}                       # parent of node in BFS tree
+    layers = [[] for d in range(N(G))] # lists of nodes at each distance.
+
+    finalized = set()
+    Q = queue.Queue(); Q.put(s)
+    distances[s] = 0; parents[s] = None;
+    while not(Q.empty()):
+        u = Q.get()
+        if u in finalized: continue
+        finalized.add(u)
+        layers[distances[u]].append(u) 
+        for v in G[u]:
+            if v in distances or (not exploreZeroEdges and G[u][v]==0): continue
+            parents[v] = u
+            distances[v] = distances[u] + 1
+            Q.put(v)
+
+    return distances, parents, layers
+
+def findAugmentingPath(G, s, t):
+    _, parents, _ = BFS(G, s, exploreZeroEdges=False)
+    if t not in parents:
+        return [], 0
+    v = t
+    ts_path = [v]
+    bottleneck = float('inf')
+    while v != s:
+        u = parents[v]
+        ts_path.append(u)
+        if G[u][v] < bottleneck:
+            bottleneck = G[u][v]
+        v = u
+    st_path = ts_path[::-1]
+    return st_path, bottleneck
+
+def makeConnected(G):
+    def addChild(u):  # adds edge to node that is not parent of u
+        for v in G:
+            if u not in G[v]:
+                addEdge(G, u, v, label=4)
+                
+    foreachNode(G, lambda u: addChild if degree(G,u) == 0 else None)
+    return G
+
+def makeDirected(G):
+    foreachEdge(G, lambda u,v: delEdge(G, v,u), safe=True)
+    return G
+
+def sampleWoutReplace(n,d, exclude, rng):
+    # generate d numbers without replacement from {0,...,n-1} - {exclude}.
+    sample = [exclude]
+    for j in range(d):
+        nbr = rng.integers(n)
+        while nbr in sample:
+            nbr = rng.integers(n)
+        sample.append(nbr)
+    return sample[1:]
+
+def randomDigraphDegreeBound(n, d, seed=None):
+    # each vertex given d random incoming and outgoing edges (repeats ignored)
+    rng = np.random.default_rng(seed)
+    G = emptyGraph(n)
+    for i in G:
+        out_list = sampleWoutReplace(n,d,i, rng)
+        for nbr in out_list:
+            addEdge(G, i, nbr, label=rng.random())
+        in_list = sampleWoutReplace(n,d,i, rng)
+        for nbr in in_list:
+            addEdge(G, nbr, i, label=rng.random())
+    def scale_edge(u, v):
+        G[u][v] = int(G[u][v] * 50)
+    traverseGraph(G,
+                  lambda u: None,
+                  scale_edge)    
+    return G
+
+def randomDigraphWithSourceSink(n, d, greedy_fail, seed=None): # for FF
+    G = randomDigraphDegreeBound(n, d, seed)
+    makeDirected(G)
+    makeConnected(G)    
+    scale = lambda x: int(x*50)
+    def scale_edge(u, v):
+        G[u][v] = scale(G[u][v])
+    traverseGraph(G,
+                  lambda u: None,
+                  scale_edge)
+    s, t = n, n + 1
+    addNode(G, s)
+    addNode(G, t)
+    rng = np.random.default_rng(seed)
+    out_list = sampleWoutReplace(n, d, s, rng)
+    for nbr in out_list:
+        addEdge(G, s, nbr, label=scale(rng.random()))
+    in_list = sampleWoutReplace(n, d, t, rng)
+    for nbr in in_list:
+        addEdge(G, nbr, t, label=scale(rng.random()))
+    if greedy_fail:
+        addGreedyFailureFF(G, s, t, seed=seed)
+    return G, s, t
+
+def assertValidFlow(exF, C, s, t, k, flow): # exF=flow graph, C=capacity graph
+    assert graphIsSubset(exF, C, lambda w1, w2: True), \
+        f"Nodes {N(exF)} != {N(C)}; Edges {M(exF)} != {M(C)} where F != G"
+    assert graphForAll(exF,f_e=lambda u,v: exF[u][v]>=0 and exF[u][v]<=C[u][v]),\
+        f"flow not in range [0, cap] on at least one edge"
+    xorEdge(exF, t, s, flow)
+    inF = copyGraph(exF)
+    reverseGraph(inF)
+    for u in inF:
+        in_f = sum(inF[u][v] for v in inF[u])
+        ex_f = sum(exF[u][v] for v in exF[u])
+        assert in_f == ex_f, f"Flow conservation failed on {u}"
+        if k != 0 and u not in (s,t):
+            assert in_f <= k, f"Node {u} surpassed capacity {k}"
+    xorEdge(exF, t, s, flow)
+
+def addGreedyFailureFF(G, s, t, seed=123):
+    random.seed(seed)
+    n = N(G)
+    L = 100
+    S = L - random.randrange(4, 60)
+    for i in range(6):
+        addNode(G, n + i)
+    addEdge(G, s, n, label=S)
+    addEdge(G, n, n + 1, label=S)
+    addEdge(G, n + 1, n + 2, label=S)
+    addEdge(G, n + 2, t, label=L)
+    addEdge(G, s, n + 3, label=L)
+    addEdge(G, n + 3, n + 2, label=L)
+    addEdge(G, n + 3, n + 4, label=S)
+    addEdge(G, n + 4, n + 5, label=S)
+    addEdge(G, n + 5, t, label=S)

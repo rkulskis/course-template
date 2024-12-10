@@ -1,3 +1,4 @@
+SHELL=/bin/bash
 VISIBILITIES = {visible,after_published,after_due_date,hidden}
 TEST_DIRS = ./autograder/tests/$(VISIBILITIES)/{inputs,outputs}
 CLASS_LIB = classlib.py
@@ -49,7 +50,7 @@ export RUN_TESTS
 define SETUP_SH
 #!/usr/bin/env bash
 apt-get -y install openjdk-11-jdk
-apt-get install -y python3 python3-pip python3-dev
+apt-get install -y python3 python3-pip python3-dev firejail
 pip3 install -r /autograder/source/requirements.txt
 endef
 export SETUP_SH
@@ -62,21 +63,22 @@ endef
 export REQUIREMENTS_TXT
 
 all: clean
-	mkdir autograder
+	mkdir -p autograder
 	echo "$$AUTOGRADER_MAKEFILE" > autograder/Makefile
 	echo "$$RUN_AUTOGRADER" > autograder/run_autograder
 	echo "$$RUN_TESTS" > autograder/run_tests.py
 	echo "$$SETUP_SH" > autograder/setup.sh
+	echo "$$REQUIREMENTS_TXT" > autograder/requirements.txt
 
-	bash -c "mkdir -p $(TEST_DIRS) starter_code/tests solution"
-	bash -c "ln -sfrt ./ ../problems/$(CLASS_LIB)"
-	bash -c "ln -sfrt ./ ../problems"
-	bash -c "ln -sfrt ./autograder ./starter_code/submission.py"
-	bash -c "ln -sfrt ./autograder/tests ./autograder/$(CLASS_LIB)"
-	bash -c "ln -sfrt ./starter_code ./assignment-description.pdf"	
-	bash -c "ln -sfrt ./starter_code/tests ./autograder/tests/test_descriptions.txt"
-	bash -c "ln -sfrt ./starter_code/tests \
-./autograder/tests/visible/{inputs,outputs}"
+	mkdir -p $(TEST_DIRS) starter_code/tests solution
+	ln -sfrt ./ ../problems/$(CLASS_LIB)
+	ln -sfrt ./ ../problems
+	ln -sfrt ./autograder ./solution/submission.py
+	ln -sfrt ./autograder/ ./starter_code/$(CLASS_LIB)
+	ln -sfrt ./autograder/ ./autograder/tests/problems
+	ln -sfrt ./starter_code ./assignment-description.pdf
+	ln -sfrt ./starter_code/tests ./autograder/tests/test_descriptions.txt
+	ln -sfrt ./starter_code/tests ./autograder/tests/visible/{inputs,outputs}
 	python3 create_assignment_files.py # also creates problem_paths.txt
 	rm -rf starter_code/dist
 	make obsfucate-test-code
@@ -95,6 +97,12 @@ obsfucate-test-code:
 	rm -rf problem_paths.txt && \
 	cd ..
 	mv autograder/tests/dist starter_code
+test-security:
+	mv solution/submission.py tmp.py
+	ln -s ../security_tests/access_network.py ./solution/submission.py
+	make -C autograder
+	rm solution/submission.py
+	mv tmp.py solution/submission.py
 zip:
 	$(MAKE) zip -C autograder
 	$(MAKE) zip -C starter_code
