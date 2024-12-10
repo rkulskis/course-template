@@ -10,8 +10,8 @@ if [ -d "$PUBLIC_REPO/$PARENT_DIR/$DIR" ]; then # get rid of old version
 		rm -rf "$PUBLIC_REPO/$PARENT_DIR/$DIR"
 fi
 
-mkdir -p "$PUBLIC_REPO"/{pa,wa,lectures,labs,exams,quizzes}
-for dir in pa wa lectures labs exams quizzes; do
+for dir in pa wa lec lab exam quiz; do
+		mkdir -p "$PUBLIC_REPO/$dir"
 	  cp "$dir/README.md" "$PUBLIC_REPO/$dir/";
 done
 
