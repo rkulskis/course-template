@@ -92,6 +92,8 @@ obsfucate-test-code:
 	--platform windows.x86_64 \
 	--platform linux.x86_64 \
 	--platform darwin.x86_64 \
+  --platform darwin.arm64 \
+  --platform linux.aarch64 \
 	test.py classlib.py $$(cat problem_paths.txt) && \
 	mkdir -p dist/problems && \
 	cd dist && \
