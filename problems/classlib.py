@@ -215,7 +215,6 @@ def execTest(i, visibility, checkAnswer):
             '--net=none',
             f'--whitelist={in_file}',
             f'--whitelist={cwd}/submission.py',
-            f'--whitelist={cwd}/problems',
             f'--whitelist={cwd}/classlib.py',
             f'--whitelist={cwd}/{student_out_file}',
         ]

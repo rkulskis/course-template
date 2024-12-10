@@ -53,6 +53,8 @@ apt-get -y install openjdk-11-jdk
 apt-get install -y python3 python3-pip python3-dev firejail
 pip3 install -r /autograder/source/requirements.txt
 mkdir -p /run/firejail/dbus			# necessary for firejail mount
+chmod 444 /autograder/source/classlib.py # make classlib.py read-only
+chmod -R 444 /autograder/source/tests		 # make all test files read-only
 endef
 export SETUP_SH
 
