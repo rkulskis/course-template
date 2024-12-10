@@ -32,10 +32,6 @@ want to extend it to other languages as well as add:
  * **support for other languages**, e.g. Java, C, C++, Go, Rust, SQL. This
  requires polymorphism in the code AST parsing because tree-sitter has different
  node names for different languages. Hopefully this shouldn't be too difficult.
- * **Integration with GitHub repos/organizations** so you can have an
- organization for your course (e.g. Boston-University-CS330) and a repo for each
- year with a starter code directory for each assignment in the student repo, and
- a private course repo for each year with corresponding source code
  
 ## Getting started
 
