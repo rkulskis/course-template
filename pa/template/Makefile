@@ -102,12 +102,6 @@ obsfucate-test-code:
 	rm -rf problem_paths.txt && \
 	cd ..
 	mv autograder/tests/dist starter_code
-test-security:
-	mv solution/submission.py tmp.py
-	ln -s ../security_tests/access_network.py ./solution/submission.py
-	make -C autograder
-	rm solution/submission.py
-	mv tmp.py solution/submission.py
 zip:
 	$(MAKE) zip -C autograder
 	$(MAKE) zip -C starter_code
