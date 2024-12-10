@@ -19,6 +19,7 @@ want to extend it to other languages as well as add:
    to publish only the starter code for a PA or the contents of a WA. Simply
    run `make publish DIR=PA-assignment-name` and this will copy to `PUBLIC_REPO` 
    (configure this in the Makefile) for students to pull the assignments.
+   This repo's mirror repo is [https://github.com/rkulskis/autograder-template-students/tree/main](autograder-template-students)
  * **plagiarism checkers**: against the solution and all past
  submissions. Probably do this asynchronously as a daemon process since only the
  course staff should see the results of whether a student submission was
