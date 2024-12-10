@@ -20,7 +20,8 @@ want to extend it to other languages as well as add:
    `./publish.sh path/to/dir` and this will copy the non-critical code in that
    dir to `PUBLIC_REPO` (configure this in the Makefile) for students to pull
    the assignments.  This repo's mirror repo is
-   <https://github.com/rkulskis/students-course-template>
+   <https://github.com/rkulskis/students-course-template>. All you need to do is
+   create an empty repo, clone it, and `publish.sh` will take care of the rest!
  * **plagiarism checkers**: against the solution and all past
  submissions. Probably do this asynchronously as a daemon process since only the
  course staff should see the results of whether a student submission was
