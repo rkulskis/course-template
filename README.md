@@ -1,4 +1,4 @@
-# Autograder template
+# Course template
 
 ## About
 This template allows for course staff to easily create new assignments with
@@ -20,7 +20,7 @@ want to extend it to other languages as well as add:
    `./publish.sh path/to/dir` and this will copy the non-critical code in that
    dir to `PUBLIC_REPO` (configure this in the Makefile) for students to pull
    the assignments.  This repo's mirror repo is
-   <https://github.com/rkulskis/autograder-template-students>
+   <https://github.com/rkulskis/students-course-template>
  * **plagiarism checkers**: against the solution and all past
  submissions. Probably do this asynchronously as a daemon process since only the
  course staff should see the results of whether a student submission was
@@ -120,7 +120,7 @@ assignment directory
 6. Run `make zip` inside `pa/assignment-name` to make `starter_code.zip` (to
 distribute to the students) and `autograder.zip` to upload to gradescope
 7. To run all of steps 3-6 in one command, in the root of the repo run: `make
-DEMO_DIR=pa/assignment-name`
+DIR=pa/assignment-name`
 
 ## Background
 Below is a `tree` of the code including descriptions for the files and how to
@@ -187,15 +187,8 @@ KEY:
 │   │   │   │   ├── {problems_for_this_PA,...}.py
 │   │   │   │   └── problem.py
 │   │   │   ├── pyarmor_runtime_000000
-│   │   │   │   ├── darwin_x86_64
-│   │   │   │   │   └── pyarmor_runtime.so
-│   │   │   │   ├── __init__.py
-│   │   │   │   ├── linux_x86_64
-│   │   │   │   │   └── pyarmor_runtime.so
-│   │   │   │   ├── __pycache__
-│   │   │   │   │   └── __init__.cpython-312.pyc
-│   │   │   │   └── windows_x86_64
-│   │   │   │       └── pyarmor_runtime.pyd
+│   │   │   │   └── cross-platform libraries
+│   │   │   │       └── pyarmor_runtime.{platform-extension}
 │   │   │   └── test.py
 │   │   ├── Makefile
 │   │   ├── student_output.txt
