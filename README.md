@@ -36,12 +36,6 @@ want to extend it to other languages as well as add:
  organization for your course (e.g. Boston-University-CS330) and a repo for each
  year with a starter code directory for each assignment in the student repo, and
  a private course repo for each year with corresponding source code
- * **Integration with GitHub classroom** (since it's free! and gradescope is not
- free). Additionally, this requires student to use git which is an essential
- programming skill. Also, the GitHub actions show live results so students can
- see which tests they pass/fail in real-time rather than looking at the
- gradescope loading screen, waiting for all their results to arrive at the end.
- 
  
 ## Getting started
 
