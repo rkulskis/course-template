@@ -4,6 +4,10 @@ on:
     branches:
       - main
 jobs:
+  print_hi:
+    steps:
+      - name: Print Hi
+        run: echo "hi"
   push_starter_code:
     # run job only if commit message matches PA-*/starter_code
     if: |
