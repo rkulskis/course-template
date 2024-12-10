@@ -11,10 +11,11 @@ hidden
 visible
 starter_code
 solution
-*/**/problems
 tests
 autograder
-*PA*/classlib.py
+pa/*/problems
+pa/*/classlib.py
+!pa/problems/classlib.py
 *.aux
 *.log
 *.out

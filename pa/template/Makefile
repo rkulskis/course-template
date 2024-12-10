@@ -113,5 +113,10 @@ zip:
 	$(MAKE) zip -C starter_code
 	mv autograder/*.zip starter_code/*.zip .
 clean:
-	cat ../.gitignore | while read -r pattern; \
+	cat ../../.gitignore | while read -r pattern; \
 	do find . -name "$$pattern" -exec rm -rf {} +; done
+	cat ../../.gitignore | while read -r pattern; \
+	do find . \( -type f -o -type l \) -wholename "$$pattern" -exec rm {} +; done
+	cat ../../.gitignore | while read -r pattern; \
+	do find . -type d -wholename "$$pattern" -exec rm -rf {} +; done
+	-rm classlib.py problems
