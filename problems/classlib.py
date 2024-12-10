@@ -219,6 +219,8 @@ def execTest(i, visibility, checkAnswer):
             f'--whitelist={cwd}/classlib.py',
             f'--whitelist={cwd}/{student_out_file}',
         ]
+        if not visibility:      # for starter_code testing
+            firejail = []
         ret = subprocess.run(
             firejail + ['python3', '-c',
                         f"import sys; sys.path.append('{cwd}'); \
