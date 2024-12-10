@@ -1,5 +1,5 @@
 SHELL=/bin/bash
-DIR = pa/template
+DIR = pa/template-python
 PA-DIRS := $(filter-out problems,$(wildcard pa/*/))
 REQUIREMENTS = timeout-decorator gradescope-utils numpy tree-sitter tree-sitter-python
 all: demo
