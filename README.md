@@ -1,7 +1,6 @@
 # Course template
 
-![Alt text](./course_template.svg)
-<img src="./course_template.svg">
+![testing overview](./course_template.svg)
 ## About
 This template allows for course staff to easily create new assignments with
 maximal automation and speed. The goal is to standardize the creation of
