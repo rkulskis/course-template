@@ -5,8 +5,11 @@ CLASS_LIB = classlib.py
 
 define STARTER_MAKEFILE
 all: test
-test:
-	python3 dist/test.py
+test: 
+	sudo docker run \
+		-v `pwd | xargs realpath`:/starter \
+		-it rkulskis/course-template-toolchain:latest \
+		/bin/bash -c "cd starter; python3 dist/test.py"
 zip: clean
 	zip -r starter_code.zip .
 clean:
@@ -19,7 +22,7 @@ all: test
 zip: clean
 	zip -r autograder.zip . -x "*submission.py"
 test:
-	python3 tests/test.py
+	@python3 tests/test.py
 clean:
 	find . -name "__pycache__" -exec rm -rf {} +
 	find . -name "*~" -exec rm -rf {} +
@@ -73,22 +76,29 @@ all: clean
 	echo "$$SETUP_SH" > autograder/setup.sh
 	echo "$$REQUIREMENTS_TXT" > autograder/requirements.txt
 
+	-rm -rf starter_code/tests		# since we copy over files and don't symlink
 	mkdir -p $(TEST_DIRS) starter_code/tests solution
-	ln -sfrt ./ ../problems/$(CLASS_LIB)
-	ln -sfrt ./ ../problems
-	ln -sfrt ./autograder ./solution/submission.py
-	ln -sfrt ./autograder/ ./starter_code/$(CLASS_LIB)
-	ln -sfrt ./autograder/ ./autograder/tests/problems
-	ln -sfrt ./starter_code ./assignment-description.pdf
-	ln -sfrt ./starter_code/tests ./autograder/tests/test_descriptions.txt
-	ln -sfrt ./starter_code/tests ./autograder/tests/visible/{inputs,outputs}
+	cd autograder && \
+	ln -sf ../starter_code/classlib.py classlib.py && \
+	ln -sf ../solution/submission.py submission.py;
+	ln -sf ../problems/classlib.py classlib.py && \
+	ln -sf ../problems problems;
+
+	ln -sf ../problems/classlib.py classlib.py && \
+	ln -sf ../problems/ problems
 	python3 create_assignment_files.py # also creates problem_paths.txt
+	cd starter_code && \
+	ln -sf ../assignment-description.pdf assignment-description.pdf && \
+	cd tests && \
+	cp -r ../../autograder/tests/visible/inputs . && \
+	cp -r ../../autograder/tests/visible/outputs . && \
+	cp ../../autograder/tests/test_descriptions.txt .
 	rm -rf starter_code/dist
 	make obsfucate-test-code
 	echo "$$STARTER_MAKEFILE" > starter_code/Makefile
 obsfucate-test-code:
 	cd autograder/tests && \
-	pipx run pyarmor gen  \
+	pyarmor gen  \
 	--platform windows.x86_64 \
 	--platform linux.x86_64 \
 	--platform darwin.x86_64 \

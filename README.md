@@ -1,6 +1,4 @@
 # Course template
-
-![testing overview](./course_template.svg)
 ## About
 This template allows for course staff to easily create new assignments with
 maximal automation and speed. The goal is to standardize the creation of
@@ -42,28 +40,9 @@ want to extend it to other languages as well as add:
 	 student code yields the correct classification of data points
  
 ## Getting started
-
-## Creating a new repository with this template
-
-In the right-hand side of GitHub click the green box `Use this template` and
-create your own private clone of this repo.
-
-## Porting to existing framework of code
-
-Alternatively, to pull this framework into your private course
-repository run:
-```
-git remote add upstream git@github.com:rkulskis/autograder-template.git
-git remote set-url --push upstream no_push
-git config --global merge.keeporigin.driver "cp -f %A %O"
-echo "classlib.py merge=keeporigin" > .gitattributes
-git pull upstream main --allow-unrelated-histories
-```
-
 ### Demo
 ```bash
-# install some packages with pip, e.g. tree-sitter parser for code autogeneration
-make install 
+make enter-docker
 # demo all of the code generation with pa/template, test running, and zipping
 make demo
 ```
@@ -131,16 +110,17 @@ submissions, but can be extended to other languages as needed.
 ### Tree (source files only)
 ```bash
 pa/problems
-├── autogeneration.py
+├── DoubleEdgeWeights.py
+├── (PROBLEM_INSTANCES...).py
+├── problem.py
 └── classlib.py
 
 1 directory, 2 files
 
 pa/template-python
-├── autogeneration.py
-├── DoubleEdgeWeights.py
-├── Makefile
-└── test.py
+├── assignment-description.{tex,pdf}
+├── create_assignment_files.py
+└── Makefile
 
 1 directory, 4 files
 ```

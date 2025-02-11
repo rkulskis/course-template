@@ -1,7 +1,7 @@
 SHELL=/bin/bash
 DIR = pa/template-python
 PA-DIRS := $(filter-out problems,$(wildcard pa/*/))
-REQUIREMENTS = timeout-decorator gradescope-utils numpy tree-sitter tree-sitter-python
+REQUIREMENTS = timeout-decorator gradescope-utils numpy tree_sitter_languages tree-sitter==0.21.3 pipx
 all: demo
 publish:
 demo:
@@ -9,9 +9,20 @@ demo:
 	$(MAKE) -C $(DIR)/starter_code # run all starter tests on submission.py
 	$(MAKE) -C $(DIR)/autograder # run all autograder tests on submission.py
 	$(MAKE) zip -C $(DIR)				# get autograder.zip and starter_code.zip
+enter-docker:
+	sudo docker run \
+	-v `pwd | xargs realpath`:/course-template \
+	-it rkulskis/course-template-toolchain:latest \
+	/bin/bash -c "cd /course-template; /bin/bash"
+_build-docker:									# don't need to run, rather do enter-docker and image is pulled from remote dockerhub
+	docker buildx build \
+  --platform linux/amd64,linux/arm64 \
+  -t rkulskis/course-template-toolchain:latest \
+  --push .
+
 install:														# only need to run once
   # can change to pipx, but cannot find tree-sitter for some reason	
-	echo $(REQUIREMENTS) | xargs -n 1 pip install	--break-system-packages
+	echo $(REQUIREMENTS) | xargs -n 1 pip install
 clean:
 	@cat .gitignore | while read -r pattern; \
 	do find . -name "$$pattern" -exec rm -rf {} +; done

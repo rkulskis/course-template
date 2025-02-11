@@ -77,6 +77,53 @@ def copyGraph(G):               # deep copy
                   lambda u,v: addEdge(C, u, v, G[u][v]))
     return C
 
+def makeUndirected(G):          # ensure every (u,v) has a (v,u)
+    foreachEdge(G, lambda u,v: addEdge(G, v,u, G[u][v]))
+    return G
+
+def makeDirected(G):
+    foreachEdge(G, lambda u,v: delEdge(G, v,u), safe=True)
+    return G
+
+def makeConnected(G):
+    def addChild(u):  # adds edge to node that is not parent of u
+        for v in G:
+            if u not in G[v]:
+                addEdge(G, u, v, label=4)
+                
+    foreachNode(G, lambda u: addChild if degree(G,u) == 0 else None)
+    return G
+
+def reverseGraph(G):
+    def reverseEdge(u,v):
+        addEdge(G, v, u, G[u][v])
+        delEdge(G, u, v)
+    foreachEdge(G, reverseEdge, safe=True)
+    return G
+
+def mergeGraph(G1, G2, f=lambda w1, w2: w1 + w2): # default behavior: G1 + G2
+    traverseGraph(G2,
+                  lambda u: addNode(G1,u),
+                  lambda u,v: addEdge(G1, u, v, G2[u][v], f=f))
+    return G1
+
+def subtractGraph(G1, G2, subtractNodes=False):      # G1 - G2
+    def rmG_n(u):
+        delNode(G1, u)     
+    traverseGraph(G2,
+                  lambda u: rmG_n if subtractNodes else None,
+                  lambda u,v: delEdge(G1, u, v),
+                  safe=True)
+    return G1
+
+def intersectGraphs(G1, G2):
+    I = emptyGraph()
+    for (L,R) in [(G1,G2), (G2,G1)]:
+        traverseGraph(L,
+                      lambda u: addNode(I, u) if u in R else None,
+                      lambda u,v: addEdge(I, u, v, L[u][v]) \
+                      if (v in R and L[u][v] == R[u][v]) else None)
+    return I
 ############################################################ Boolean operations
 def graphForAll(G, f_v=None, f_e=None):
     for u in G:
@@ -96,7 +143,48 @@ def graphIsSubset(G1, G2, f=lambda w1, w2: w1 == w2): # G1 subset_eq G2
 def graphsEqual(G1, G2, f=lambda w1, w2: w1 == w2):
     return graphIsSubset(G1, G2, f) and graphIsSubset(G2, G1, f)
 
+def checkCycle(G, path):
+    cost = 0.0
+    for u, v in zip(path, path[1:]+path[:1]):
+        if v not in G[u]:
+            return False, cost
+        cost += G[u][v]
+    return True, cost
 ############################################################ Graph generators
+def cycleGraph(n, label = 1):
+    G = emptyGraph(n)
+    for i in range(n):
+        addEdge(G, i, (i+1)%n, label, undir=True)
+    return G
+
+def completeGraph(n, label=1):
+    G = emptyGraph(n)
+    for i in range(n):
+        for j in range(i+1,n):
+            addEdge(G, i,j, label, undir=True)
+    return G
+
+def randomERGraph(n, p, seed = None): # Theta(n^2) independent of p
+    rng = np.random.default_rng(seed)
+    G = emptyGraph(n)
+    for i in range(n):
+        for j in range(i+1,n):
+            if (rng.random() < p):
+                addEdge(G, i, j, undir=True)
+    return G
+
+def randomERGraphFast(n, p, seed = None): # runs quicker when p small
+    # O(n+m) where m is the actual number of edges added
+    rng = np.random.default_rng(seed)
+    G = emptyGraph(n)
+    for i in range(n):
+        j = i
+        j = j + rng.geometric(p)
+        while j < n:
+            addEdge(G, i, j, undir=True)
+            j = j + rng.geometric(p)
+    return G 
+
 def sampleWoutReplace(n,d, exclude, rng):
     # generate d numbers without replacement from {0,...,n-1} - {exclude}.
     sample = [exclude]
@@ -124,6 +212,45 @@ def randomDigraphDegreeBound(n, d, seed=None):
                   lambda u: None,
                   scale_edge)    
     return G
+
+def randomDigraphWithSourceSink(n, d, greedy_fail, seed=None): # for FF
+    G = randomDigraphDegreeBound(n, d, seed)
+    makeDirected(G)
+    makeConnected(G)    
+    scale = lambda x: int(x*50)
+    def scale_edge(u, v):
+        G[u][v] = scale(G[u][v])
+    traverseGraph(G,
+                  lambda u: None,
+                  scale_edge)
+    s, t = n, n + 1
+    addNode(G, s)
+    addNode(G, t)
+    rng = np.random.default_rng(seed)
+    out_list = sampleWoutReplace(n, d, s, rng)
+    for nbr in out_list:
+        addEdge(G, s, nbr, label=scale(rng.random()))
+    in_list = sampleWoutReplace(n, d, t, rng)
+    for nbr in in_list:
+        addEdge(G, nbr, t, label=scale(rng.random()))
+    if greedy_fail:
+        addGreedyFailureFF(G, s, t, seed=seed)
+    return G, s, t
+
+def randomSignedDiGraph(n,d,q, seed = None):
+    G = randomDigraphDegreeBound(n, d, seed = seed)
+    rng = np.random.default_rng(seed)
+    def signEdge(u,v):
+        G[u][v] = -1 if rng.grandom() < q else 1
+    foreachEdge(G, signEdge) # Each edge given sign -1 with probability q
+    return G
+
+def oneNegCycle(n):
+    G = emptyGraph(n)
+    for i in range(n):
+        addEdge(G, i , (i+1)%n, 1)
+    G[0][1] = -n
+    return G
 ############################################################ Traversals
 def traverseGraph(G, f_v, f_e, safe=False):
     if safe:
@@ -137,7 +264,123 @@ def traverseGraph(G, f_v, f_e, safe=False):
 def traverseGraphSafe(G, f_v, f_e): # safe since iterate over list
     for (u,v) in E(G): f_e(u, v) # edges first since may delete nodes
     for u in V(G): f_v(u)
-    
+
+def BFS(G, s, exploreZeroEdges = True):
+    distances = {}                     # in terms of number of edges
+    parents = {}                       # parent of node in BFS tree
+    layers = [[] for d in range(N(G))] # lists of nodes at each distance.
+
+    finalized = set()
+    Q = queue.Queue(); Q.put(s)
+    distances[s] = 0; parents[s] = None;
+    while not(Q.empty()):
+        u = Q.get()
+        if u in finalized: continue
+        finalized.add(u)
+        layers[distances[u]].append(u) 
+        for v in G[u]:
+            if v in distances or (not exploreZeroEdges and G[u][v]==0): continue
+            parents[v] = u
+            distances[v] = distances[u] + 1
+            Q.put(v)
+
+    return distances, parents, layers
+
+def findAugmentingPath(G, s, t):
+    _, parents, _ = BFS(G, s, exploreZeroEdges=False)
+    if t not in parents:
+        return [], 0
+    v = t
+    ts_path = [v]
+    bottleneck = float('inf')
+    while v != s:
+        u = parents[v]
+        ts_path.append(u)
+        if G[u][v] < bottleneck:
+            bottleneck = G[u][v]
+        v = u
+    st_path = ts_path[::-1]
+    return st_path, bottleneck
+
+def DFS(G):
+    color = {}
+    discovered = {}
+    finished = {}
+    parent = {}
+    for u in G:
+        color[u] = "white"
+        parent[u] = None
+    timestamp = [0] # only element is the current value of the time stamp. 
+
+    def DFSVisit(u,  G, timestamp, color, discovered, finished):
+        # Only the first argument ever changes
+        color[u] = "gray"
+        timestamp[0] = timestamp[0] + 1
+        discovered[u] = timestamp[0]
+        for v in G[u]:
+            if color[v] == "white":
+                    parent[v] = u
+                    DFSVisit(v,  G, timestamp, color, discovered, finished)
+        color[u] = "black"
+        timestamp[0] = timestamp[0] + 1
+        finished[u] = timestamp[0]
+        return
+
+    for u in G:
+        if color[u] == "white":
+            DFSVisit(u, G, timestamp, color, discovered, finished)
+    return discovered, finished, parent
+
+def DFSstack(G):                # stack rather than recursion
+    color = {}
+    discovered = {}
+    finished = {}
+    parent = {}
+    stack = []
+    for u in G:
+        color[u] = "white"
+        parent[u] = None
+        stack.append((u, "discover"))
+    timestamp = 0     
+
+    while (stack != []):
+        (u, task) = stack.pop()
+        if task == "discover": # This is u's discovery
+            if color[u] == "white": # ignore u if it was already discovered
+                color[u] = "gray"
+                timestamp = timestamp + 1
+                discovered[u] = timestamp
+                stack.append((u, "finish"))
+                for v in G[u]:
+                    if color[v] == "white":
+                        parent[v] = u
+                        stack.append((v, "discover")) # Put v on list of nodes to discover.
+        else: # This means task == "finish". We are done exploring from u. 
+            color[u] = "black"
+            timestamp = timestamp + 1
+            finished[u] = timestamp
+    return discovered, finished, parent
+
+def dijkstra(G, s):             # assumes nonnegative path costs
+    distances = {}              # actual distances (sum of costs along path)
+    parents = {}                # parent of node in SP tree
+
+    finalized = set()           # set of discovered nodes
+    Q = []                      # empty priority queue
+    distances[s] = 0; parents[s] = None
+    heapq.heappush(Q, (distances[s], s))
+    while len(Q) > 0:
+        (d, u) = heapq.heappop(Q) # extract-min
+        if u in finalized: continue
+        finalized.add(u)
+        for v in G[u]:
+            new_length = distances[u] + G[u][v]
+            if v in distances and new_length < distances[v]: continue
+            distances[v] = new_length
+            parents[v] = u
+            heapq.heappush(Q, (distances[v], v)) 
+    return distances, parents
+
 ############################################################ I/O functions
 def writeGraphF(G, f):          # sorted so identical graphs formatted same
     for u in sorted(G):
@@ -180,7 +423,7 @@ def readGraph(input_file):
     with open(input_file, 'r') as f:
         firstline = f.readline().strip()
         if "args:" in firstline:
-            args = list(map(int, firstline[len("args:"):].split(',')))
+            args = (map(int, firstline[len("args:"):].split(',')))
         else:
             f.seek(0)
         G = readGraphF(f)
@@ -195,6 +438,7 @@ import subprocess, time
 import timeout_decorator
 from gradescope_utils.autograder_utils.decorators import *
 import unittest
+import shutil
 from problems.problem import Problem
 
 def execTest(i, visibility, checkAnswer):
@@ -218,8 +462,9 @@ def execTest(i, visibility, checkAnswer):
             f'--whitelist={cwd}/classlib.py',
             f'--whitelist={cwd}/{student_out_file}',
         ]
-        if not visibility:      # for starter_code testing
+        if not shutil.which("firejail"):      # not in gradescope container
             firejail = []
+        firejail = []            
         ret = subprocess.run(
             firejail + ['python3', '-c',
                         f"import sys; sys.path.append('{cwd}'); \
@@ -229,29 +474,36 @@ def execTest(i, visibility, checkAnswer):
             stderr=subprocess.PIPE, stdout=subprocess.PIPE, timeout=time_bound
         )
     except subprocess.TimeoutExpired:
-        return False, f'Program ran longer than {time_bound:.2f} seconds.'
+        return False, f'Program ran longer than {time_bound:.2f} seconds.', "ERR"
     end = time.time()
     runtime = end - start
     
     if ret.returncode != 0:
         error_string = ret.stderr.decode() if ret.stderr else ""
         return False, f"Submitted program crashed.\n === Error messages:\n \
-        {error_string[:min(1000, len(error_string))]}"
+        {error_string[:min(1000, len(error_string))]}", "ERR"
     
-    passed, feedback = checkAnswer(in_file, out_file, student_out_file)
-    info = f"Submitted program terminated in {runtime:.2f} seconds.\n{feedback}"
-    return passed, info
+    passed, error = checkAnswer(in_file, out_file, student_out_file)
+    info = f"{runtime:.2f} sec"
+    return passed, info, error
 
+import shutil
 class Test(unittest.TestCase):  # auto generate tests
     def formatted_test_run(self, i, visibility, checkAnswer, test_description):
-        print(f"==========Testing input {i:02d} ({visibility})==========")
-        print(test_description)
-        passed, info = execTest(i, visibility, checkAnswer)
-        self.fail(info) if not passed else print(info)
+        passed, info, error = execTest(i, visibility, checkAnswer)
+        prefix = f"Test {i+1:02}: {test_description}  "
+        msg = "Pass" if passed else "Fail"
+        suffix = f"  {msg}  {info}  "
+        dots = "." * (shutil.get_terminal_size().columns \
+                      - len(prefix) - len(suffix) - 2)
+        print("\r" + prefix + dots + suffix)
+        if not passed:
+            print(f"Error: {error}")
+            self.fail(error)
 
     def generate_test(self, i, visibility, w, checkAnswer, test_description):
         @weight(w)
-        @number(f'({i:02d}: {test_description}') # display metadata on test
+        @number(f'({i+1:02d}: {test_description}') # display metadata on test
         @timeout_decorator.timeout(5)
         def test_func(self):
             self.formatted_test_run(i, visibility, checkAnswer, test_description)
@@ -259,7 +511,7 @@ class Test(unittest.TestCase):  # auto generate tests
 
 def generate_test_methods(problemClasses):
     with open("tests/test_descriptions.txt", 'r') as f:
-        test_descriptions = [line for line in f]
+        test_descriptions = [line.strip() for line in f]
 
     pname_to_pclass = {cls.__name__: cls for cls in problemClasses}
     test_classes = [s.split(":")[0] for s in test_descriptions] # i.e. "ClassName"
@@ -277,11 +529,13 @@ def generate_test_methods(problemClasses):
                     Test().generate_test(i, visibility, w,
                                          pclass.checkAnswer, test_description))
 ############################################################ Assignment creation
-import tree_sitter_python as ts
 import ast
 import inspect, textwrap
 from datetime import datetime
-from tree_sitter import Language, Parser
+from tree_sitter_languages import get_language, get_parser
+
+language = get_language('python')
+parser = get_parser('python')
 
 def get_problem_paths(problem_instances):
     pclass_names = [instance.__class__.__name__ for instance in problem_instances]
@@ -324,8 +578,8 @@ section_demarcation = "#" * 60
 def create_sublib(lib_path="classlib.py",
                            sublib_path="starter_code/classlib.py",
                            dep_file_paths=["solution/submission.py"]):
-    LANGUAGE = Language(ts.language())
-    parser = Parser(LANGUAGE)
+    language = get_language('python')
+    parser = get_parser('python')
     if os.path.exists(sublib_path):
         os.remove(sublib_path) # remove temporary soft link
     with open(lib_path, "r") as f:
@@ -352,7 +606,6 @@ def create_sublib(lib_path="classlib.py",
                 comments_and_imports[f"{u.type}_{i}"] = u
                 i += 1
         return defs, comments_and_imports
-
     defs, comments_and_imports = get_defs(lib_tree, lib_code)
     processed = {}
     while calls:
@@ -363,7 +616,6 @@ def create_sublib(lib_path="classlib.py",
         processed[name] = u
         nested_calls = extract_calls(u, lib_code)
         calls.update(nested_calls)
-
     sorted_deps = sorted(processed.items() | comments_and_imports.items(),
                          key=lambda i: i[1].start_byte)
     constructs = {}
@@ -379,8 +631,6 @@ def create_sublib(lib_path="classlib.py",
            not added_def:
             for j in section:
                 del constructs[j]
-        if i == len(sorted_deps) - 1:
-            break
         if section_demarcation in block:
             section.clear()
             added_def = False
@@ -407,8 +657,8 @@ def unindent_once(code, indent_size=4):
     return "\n".join(adjusted_lines)
     
 def create_submissions(problem_paths, interpretCommandLineArgs):
-    LANGUAGE = Language(ts.language())
-    parser = Parser(LANGUAGE)
+    language = get_language('python')
+    parser = get_parser('python')
     sol_import_stub = f"\n{section_demarcation} for course staff\nsys.path.insert(0, os.path.abspath('..'))\nif os.path.exists('../solution/submission.py'):\n    from solution.submission import *\n{section_demarcation}\n\n"
     constructs = {}
     imports = set()
@@ -479,8 +729,8 @@ def create_submissions(problem_paths, interpretCommandLineArgs):
 def create_problems_subset(problems):
     os.makedirs("autograder/tests/problems", exist_ok=True)
     problem_paths = get_problem_paths(problems) + ["problems/problem.py"]
-    LANGUAGE = Language(ts.language())
-    parser = Parser(LANGUAGE)
+    language = get_language('python')
+    parser = get_parser('python')
     for p in problem_paths:
         with open(p, "r") as file:
             code = file.read()
@@ -517,7 +767,7 @@ def create_test_module(problems):
         for p in pclass_names:
             f.write(f"from problems.{p} import *\n")
         f.write(f"\ngenerate_test_methods([{', '.join(pclass_names)}])\n\n")
-        f.write("if __name__ == '__main__':\n    unittest.main()")
+        f.write("if __name__ == '__main__':\n    unittest.main(verbosity=0)")
         
 def create_all_files(problems, interpretCommandLineArgs):
     # problem files for this PA with solution() and createTest() removed, for
