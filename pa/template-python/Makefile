@@ -6,8 +6,7 @@ CLASS_LIB = classlib.py
 define STARTER_MAKEFILE
 all: test
 test: 
-	sudo docker run \
-		-v `pwd | xargs realpath`:/starter \
+	sudo docker run -v "$$$$(pwd)":/starter \
 		-it rkulskis/course-template-toolchain:latest \
 		/bin/bash -c "cd starter; python3 dist/test.py"
 zip: clean
